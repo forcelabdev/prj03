@@ -114,14 +114,22 @@ export const galaxypayService = {
       body,
       true
     )
-    if (response.success && response.data?.data) {
-      return { success: true, ...response.data.data, message: response.data.message }
-    }
-    // Backend bazi durumlarda data altinda degil direkt donebilir
-    if (response.success && response.data) {
+    // apiClient zaten data.data || data olarak döndürür, bu yüzden response.data direkt payload
+    if (response.success) {
       const d = response.data as any
-      if (d.transactionId || d.paymentUrl) {
-        return { success: true, ...d }
+      // Nested: { data: { transactionId, paymentUrl, ... } } veya flat: { transactionId, paymentUrl, ... }
+      const payload = d?.data ?? d ?? {}
+      return {
+        success: true,
+        transactionId: payload.transactionId,
+        externalTransactionId: payload.externalTransactionId,
+        paymentId: payload.paymentId,
+        method: payload.method,
+        status: payload.status,
+        amount: payload.amount,
+        currency: payload.currency,
+        paymentUrl: payload.paymentUrl,
+        message: d?.message || payload.message,
       }
     }
     return {
@@ -145,16 +153,29 @@ export const galaxypayService = {
     tcno?: string
     paparaNumber?: string
   }): Promise<GalaxyPayWithdrawResponse> {
+    // undefined alanlari temizle
+    const cleanBody: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(data)) {
+      if (v !== undefined && v !== null && v !== '') cleanBody[k] = v
+    }
     const response = await apiClient.post<{ success: boolean; message: string; data: GalaxyPayWithdrawResponse }>(
       '/payment/galaxypay/withdraw',
-      data,
+      cleanBody,
       true
     )
-    if (response.success && response.data?.data) {
-      return { success: true, ...response.data.data, message: response.data.message }
-    }
     if (response.success) {
-      return { success: true, message: (response.data as any)?.message || 'Cekim talebi olusturuldu. Admin onayi bekleniyor.' }
+      const d = response.data as any
+      const payload = d?.data ?? d ?? {}
+      return {
+        success: true,
+        transactionId: payload.transactionId,
+        externalTransactionId: payload.externalTransactionId,
+        method: payload.method,
+        status: payload.status,
+        amount: payload.amount,
+        currency: payload.currency,
+        message: d?.message || payload.message || 'Cekim talebi olusturuldu. Admin onayi bekleniyor.',
+      }
     }
     return {
       success: false,

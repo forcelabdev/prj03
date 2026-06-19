@@ -323,53 +323,57 @@ export default function DepositPage() {
 
       // GalaxyPay - seçilen yönteme göre yatırım başlat
       if (selected.id === 'galaxypay') {
-        // bank-transfer için ek alan validasyonu
-        if (galaxypayMethod === 'bank-transfer') {
-          if (!gpIban) { alert('Lütfen IBAN numaranızı girin'); setIsProcessing(false); return }
-          if (!gpAccountHolder) { alert('Lütfen hesap sahibi adını girin'); setIsProcessing(false); return }
-          if (!gpBankName) { alert('Lütfen banka adını girin'); setIsProcessing(false); return }
-          if (!gpAccountNumber) { alert('Lütfen hesap numarasını girin'); setIsProcessing(false); return }
-          if (!gpBranchCode) { alert('Lütfen şube kodunu girin'); setIsProcessing(false); return }
-          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer', {
-            accountHolder: gpAccountHolder,
-            iban: gpIban,
-            bankName: gpBankName,
-            accountNumber: gpAccountNumber,
-            branchCode: gpBranchCode,
-            tcno: gpTcno || undefined,
-          })
+        try {
+          if (galaxypayMethod === 'bank-transfer') {
+            if (!gpIban) { alert('Lütfen IBAN numaranızı girin'); setIsProcessing(false); return }
+            if (!gpAccountHolder) { alert('Lütfen hesap sahibi adını girin'); setIsProcessing(false); return }
+            if (!gpBankName) { alert('Lütfen banka adını girin'); setIsProcessing(false); return }
+            if (!gpAccountNumber) { alert('Lütfen hesap numarasını girin'); setIsProcessing(false); return }
+            if (!gpBranchCode) { alert('Lütfen şube kodunu girin'); setIsProcessing(false); return }
+            const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer', {
+              accountHolder: gpAccountHolder,
+              iban: gpIban,
+              bankName: gpBankName,
+              accountNumber: gpAccountNumber,
+              branchCode: gpBranchCode,
+              tcno: gpTcno || undefined,
+            })
+            if (gpRes.success && gpRes.paymentUrl) {
+              window.location.href = gpRes.paymentUrl
+            } else if (gpRes.success) {
+              alert('GalaxyPay banka transferi yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            } else {
+              alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+            }
+            setIsProcessing(false)
+            return
+          }
+          if (galaxypayMethod === 'papara') {
+            if (!gpPaparaNumber) { alert('Lütfen Papara numaranızı girin'); setIsProcessing(false); return }
+            const gpRes = await galaxypayService.createDeposit(amount, 'papara', { paparaNumber: gpPaparaNumber })
+            if (gpRes.success && gpRes.paymentUrl) {
+              window.location.href = gpRes.paymentUrl
+            } else if (gpRes.success) {
+              alert('GalaxyPay Papara yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            } else {
+              alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+            }
+            setIsProcessing(false)
+            return
+          }
+          // Lobby (varsayılan)
+          const gpRes = await galaxypayService.createDeposit(amount, 'lobby')
           if (gpRes.success && gpRes.paymentUrl) {
             window.location.href = gpRes.paymentUrl
           } else if (gpRes.success) {
-            alert('GalaxyPay banka transferi yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            alert('GalaxyPay işleminiz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
           } else {
             alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
           }
-          return
+        } catch (e: any) {
+          alert('GalaxyPay işlemi başlatılırken hata oluştu: ' + (e?.message || e))
         }
-        if (galaxypayMethod === 'papara') {
-          if (!gpPaparaNumber) { alert('Lütfen Papara numaranızı girin'); setIsProcessing(false); return }
-          const gpRes = await galaxypayService.createDeposit(amount, 'papara', {
-            paparaNumber: gpPaparaNumber,
-          })
-          if (gpRes.success && gpRes.paymentUrl) {
-            window.location.href = gpRes.paymentUrl
-          } else if (gpRes.success) {
-            alert('GalaxyPay Papara yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
-          } else {
-            alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
-          }
-          return
-        }
-        // Lobby (varsayılan)
-        const gpRes = await galaxypayService.createDeposit(amount, 'lobby')
-        if (gpRes.success && gpRes.paymentUrl) {
-          window.location.href = gpRes.paymentUrl
-        } else if (gpRes.success) {
-          alert('GalaxyPay işleminiz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
-        } else {
-          alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
-        }
+        setIsProcessing(false)
         return
       }
 
