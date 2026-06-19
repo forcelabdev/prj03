@@ -609,7 +609,9 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
       } else {
         const code = (result as any).errorCode || ""
         if (code === "RATE_LIMITED") {
-          setLaunchError("Lütfen birkaç saniye bekleyip tekrar deneyin.")
+          // Sessizce 3 saniye bekleyip tekrar dene, kullaniciya mesaj gosterme
+          setTimeout(() => handlePlay(game, demo), 3000)
+          return
         } else if (code === "INVALID_REQUEST" || result.error?.includes("user_id is required")) {
           setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")
         } else if (code === "PROVIDER_DISABLED") {
