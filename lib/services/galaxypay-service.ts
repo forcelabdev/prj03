@@ -101,13 +101,12 @@ export const galaxypayService = {
     return { success: false, error: response.error || 'GalaxyPay yontem bilgisi alinamadi' }
   },
 
-  // POST /payment/deposit/{method}
-  // Backend method'u path'e koyuyor: /payment/deposit/lobby, /payment/deposit/bank-transfer, /payment/deposit/papara
+  // POST /payment/galaxypay/deposit — body: { amount, method }
   // method: "lobby" | "bank-transfer" | "papara"
   async createDeposit(amount: number, method: string): Promise<GalaxyPayDepositResponse> {
     const response = await apiClient.post<any>(
-      `/payment/deposit/${method}`,
-      { amount },
+      '/payment/galaxypay/deposit',
+      { amount, method },
       true
     )
     return parseResponse<GalaxyPayDepositResponse>(response)
@@ -141,9 +140,8 @@ export const galaxypayService = {
         }
       }
     }
-    // Backend: POST /payment/withdraw/{method}
-    const method = (body.method as string) || 'bank-transfer'
-    const response = await apiClient.post<any>(`/payment/withdraw/${method}`, body, true)
+    // Backend: POST /payment/galaxypay/withdraw — body icinde method var
+    const response = await apiClient.post<any>('/payment/galaxypay/withdraw', body, true)
     return parseResponse<GalaxyPayWithdrawResponse>(response)
   },
 
