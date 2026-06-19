@@ -3,6 +3,9 @@ import apiClient from '../api-client';
 import tokenManager from '../token-manager';
 import { galaxypayService } from './galaxypay-service';
 
+// Tek merkezi API sabiti — tum payment URL'lerinde kullanilir
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://apievrymatrix5d84k321.com';
+
 export interface DepositMethod {
   id: string;
   name: string;
@@ -159,9 +162,70 @@ export const paymentService = {
         return this.createBankTransferDeposit();
       case 'super-havale': {
         const token = tokenManager.getToken();
-        if (!token) {
-          return { success: false, error: 'Lütfen giriş yapın' };
-        }
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://www.superhavale.net/odeme?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'mpay-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://www.mpay5.com/odeme?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&amount=${encodeURIComponent((data.amount || 0).toString())}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'maxi-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://maxihavale.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'hizli-odeme-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://hizli-odeme.net/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'yeni-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://yenihavale.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'oto-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://www.autohvl1.com/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'fast-havale': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://fasthavale.net/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'jetbak-transfer': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://luqapasy.com/odeme?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&amount=${encodeURIComponent((data.amount || 0).toString())}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'mpay-fast': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://www.mpay5.com/odeme?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'hemen-ode':
+      case 'hemen-ode-1': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://hemenode1.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'hemen-ode-biz': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://hemenode1.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'paymentnew': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://paymentnew.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
+      case 'glblpay': {
+        const token = tokenManager.getToken();
+        if (!token) return { success: false, error: 'Lütfen giriş yapın' };
+        return { success: true, paymentUrl: `https://glblpay.co/?token=${encodeURIComponent(token)}&username=${encodeURIComponent(data.username || '')}&apiBase=${encodeURIComponent(API_BASE)}` };
+      }
         const username = data.username || '';
         const apiBase = 'https://apievrymatrix5d84k321.com';
         const paymentUrl =
