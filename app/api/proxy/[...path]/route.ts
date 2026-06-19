@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { rateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit"
 
-const API_BASE_URL = "https://apievrymatrix5d84k321.com"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://apievrymatrix5d84k321.com"
 
 const ALLOWED_ORIGINS = [
   "https://www.velobet280.com",
@@ -39,7 +39,8 @@ function isStaticFile(path: string) {
 
 const KNOWN_DOMAINS: Record<string, string> = {
   "apifonbet.com": "https://apifonbet.com",
-  "apievrymatrix5d84k321.com": "https://apievrymatrix5d84k321.com",
+  "apievrymatrix5d84k321.com": API_BASE_URL,
+  ...(process.env.NEXT_PUBLIC_API_URL ? { [new URL(process.env.NEXT_PUBLIC_API_URL).hostname]: process.env.NEXT_PUBLIC_API_URL } : {}),
 }
 
 async function proxyRequest(req: NextRequest, params: { path: string[] }) {

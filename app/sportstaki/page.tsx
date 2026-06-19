@@ -29,7 +29,7 @@ export default function SportsTakiPage() {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState<boolean | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const retryCountRef = useRef(0)
   const maxRetries = 2
   const [sportCounts, setSportCounts] = useState<SportCount[]>([
     { id: "soccer-1", name: "Futbol", icon: "/sports-icons/futbol.svg", count: 0 },
@@ -177,41 +177,34 @@ export default function SportsTakiPage() {
       if (result.success && result.launchUrl) {
         setIsIframeLoading(true)
         setSportUrl(result.launchUrl)
-        // Başarılı URL'yi cache'e kaydet (session boyunca geçerli)
         sessionStorage.setItem(cacheKey, result.launchUrl)
-        setRetryCount(0)
+        retryCountRef.current = 0
       } else if (result.errorCode === 'RATE_LIMITED') {
-        if (retryCount < maxRetries) {
+        if (retryCountRef.current < maxRetries) {
           setError("Bağlantı kuruluyor, lütfen bekleyiniz...")
-          setRetryCount(retryCount + 1)
-          setTimeout(() => {
-            loadSportGame(userId)
-          }, 3000)
+          retryCountRef.current++
+          setTimeout(() => { loadSportGame(userId) }, 3000)
           return;
         } else {
           setError("Sistem şu anda çok yoğun. Lütfen birkaç dakika sonra tekrar deneyin.")
         }
       } else {
-        if (retryCount < maxRetries) {
+        if (retryCountRef.current < maxRetries) {
           setError("")
           setIsLoading(true)
-          setRetryCount(retryCount + 1)
-          setTimeout(() => {
-            loadSportGame(userId)
-          }, 3000)
+          retryCountRef.current++
+          setTimeout(() => { loadSportGame(userId) }, 3000)
           return;
         } else {
           setError(result.error || "Spor bahisleri yüklenemedi. Lütfen daha sonra tekrar deneyin.")
         }
       }
     } catch (err) {
-      if (retryCount < maxRetries) {
+      if (retryCountRef.current < maxRetries) {
         setError("")
         setIsLoading(true)
-        setRetryCount(retryCount + 1)
-        setTimeout(() => {
-          loadSportGame(userId)
-        }, 3000)
+        retryCountRef.current++
+        setTimeout(() => { loadSportGame(userId) }, 3000)
       } else {
         setError("Bağlantı hatası. Lütfen daha sonra tekrar deneyin.")
       }
