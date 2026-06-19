@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://apievrymatrix5d84k321.com'
 const AGENT_TOKEN = process.env.NEXT_PUBLIC_AGENT_TOKEN || ''
 
-// SERVER-SIDE RATE LIMITING - per user, 6 saniye cooldown
+// SERVER-SIDE RATE LIMITING - SADECE sport-bbbet icin, per user 3 saniye cooldown
 const userLastRequestMap = new Map<string, number>()
-const RATE_LIMIT_MS = 6000 // 6 saniye
+const RATE_LIMIT_MS = 3000 // 3 saniye (retry interval ile esit)
 
 const getHeaders = (authHeader: string | null): Record<string, string> => ({
   'Content-Type': 'application/json',
@@ -20,23 +20,23 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('Authorization')
     const { distribution, userId, vendorCode, gameCode, language = 'tr', numericId = '', channel = 'desktop', domain, mirror, isDemo = false } = body
 
-    // RATE LIMIT CHECK - sport-bbbet icin per-user 6 saniye
+    // RATE LIMIT CHECK - YALNIZCA sport-bbbet icin, diger oyunlara uygulanmaz
     if (vendorCode === 'sport-bbbet' && userId) {
       const now = Date.now()
-      const lastRequest = userLastRequestMap.get(userId) || 0
+      const rateKey = `sport-${userId}`
+      const lastRequest = userLastRequestMap.get(rateKey) || 0
       const timeSinceLastRequest = now - lastRequest
-      
+
       if (timeSinceLastRequest < RATE_LIMIT_MS) {
         const waitTime = Math.ceil((RATE_LIMIT_MS - timeSinceLastRequest) / 1000)
-        return NextResponse.json({ 
+        return NextResponse.json({
           msg: `Rate limited. Please wait ${waitTime} seconds.`,
           status: 'RATE_LIMITED',
-          retryAfter: waitTime 
+          retryAfter: waitTime
         }, { status: 429 })
       }
-      
-      // Update last request time
-      userLastRequestMap.set(userId, now)
+
+      userLastRequestMap.set(rateKey, now)
     }
 
     const dist = (distribution || '').toLowerCase()
