@@ -31,15 +31,6 @@ export default function DepositPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   // GalaxyPay deposit sub-method: 'lobby' | 'bank-transfer' | 'papara'
   const [galaxypayMethod, setGalaxypayMethod] = useState<'lobby' | 'bank-transfer' | 'papara'>('lobby')
-  // GalaxyPay bank-transfer alanları
-  const [gpAccountHolder, setGpAccountHolder] = useState("")
-  const [gpIban, setGpIban] = useState("")
-  const [gpBankName, setGpBankName] = useState("")
-  const [gpAccountNumber, setGpAccountNumber] = useState("")
-  const [gpBranchCode, setGpBranchCode] = useState("")
-  const [gpTcno, setGpTcno] = useState("")
-  // GalaxyPay papara alanı
-  const [gpPaparaNumber, setGpPaparaNumber] = useState("")
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -231,8 +222,6 @@ export default function DepositPage() {
     setSelectedMethod(id)
     setDepositAmount("")
     setGalaxypayMethod('lobby')
-    setGpAccountHolder(""); setGpIban(""); setGpBankName("")
-    setGpAccountNumber(""); setGpBranchCode(""); setGpTcno(""); setGpPaparaNumber("")
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
 
@@ -321,52 +310,14 @@ export default function DepositPage() {
     try {
       const returnUrl = `${window.location.origin}/deposit`
 
-      // GalaxyPay - seçilen yönteme göre yatırım başlat
+      // GalaxyPay - backend sadece { amount, method } bekliyor, diger alanlar profil'den alinir
       if (selected.id === 'galaxypay') {
         try {
-          if (galaxypayMethod === 'bank-transfer') {
-            if (!gpIban) { alert('Lütfen IBAN numaranızı girin'); setIsProcessing(false); return }
-            if (!gpAccountHolder) { alert('Lütfen hesap sahibi adını girin'); setIsProcessing(false); return }
-            if (!gpBankName) { alert('Lütfen banka adını girin'); setIsProcessing(false); return }
-            if (!gpAccountNumber) { alert('Lütfen hesap numarasını girin'); setIsProcessing(false); return }
-            if (!gpBranchCode) { alert('Lütfen şube kodunu girin'); setIsProcessing(false); return }
-            const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer', {
-              accountHolder: gpAccountHolder,
-              iban: gpIban,
-              bankName: gpBankName,
-              accountNumber: gpAccountNumber,
-              branchCode: gpBranchCode,
-              tcno: gpTcno || undefined,
-            })
-            if (gpRes.success && gpRes.paymentUrl) {
-              window.location.href = gpRes.paymentUrl
-            } else if (gpRes.success) {
-              alert('GalaxyPay banka transferi yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
-            } else {
-              alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
-            }
-            setIsProcessing(false)
-            return
-          }
-          if (galaxypayMethod === 'papara') {
-            if (!gpPaparaNumber) { alert('Lütfen Papara numaranızı girin'); setIsProcessing(false); return }
-            const gpRes = await galaxypayService.createDeposit(amount, 'papara', { paparaNumber: gpPaparaNumber })
-            if (gpRes.success && gpRes.paymentUrl) {
-              window.location.href = gpRes.paymentUrl
-            } else if (gpRes.success) {
-              alert('GalaxyPay Papara yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
-            } else {
-              alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
-            }
-            setIsProcessing(false)
-            return
-          }
-          // Lobby (varsayılan)
-          const gpRes = await galaxypayService.createDeposit(amount, 'lobby')
+          const gpRes = await galaxypayService.createDeposit(amount, galaxypayMethod)
           if (gpRes.success && gpRes.paymentUrl) {
             window.location.href = gpRes.paymentUrl
           } else if (gpRes.success) {
-            alert('GalaxyPay işleminiz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            alert('GalaxyPay yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
           } else {
             alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
           }
@@ -535,35 +486,7 @@ export default function DepositPage() {
             </div>
           )}
 
-          {/* GalaxyPay Banka Havalesi ek alanları */}
-          {selected?.id === 'galaxypay' && galaxypayMethod === 'bank-transfer' && (
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="text-white text-sm block mb-1">* IBAN</label>
-                <input type="text" value={gpIban} onChange={(e) => setGpIban(e.target.value.toUpperCase())} placeholder="TR00 0000 0000 0000 0000 0000 00" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white font-mono text-sm" />
-              </div>
-              <div>
-                <label className="text-white text-sm block mb-1">* Hesap Sahibi</label>
-                <input type="text" value={gpAccountHolder} onChange={(e) => setGpAccountHolder(e.target.value)} placeholder="Ad Soyad" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-white text-sm block mb-1">* Banka Adı</label>
-                <input type="text" value={gpBankName} onChange={(e) => setGpBankName(e.target.value)} placeholder="Örn: Ziraat Bankası" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-white text-sm block mb-1">* Hesap Numarası</label>
-                <input type="text" value={gpAccountNumber} onChange={(e) => setGpAccountNumber(e.target.value)} placeholder="Hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-white text-sm block mb-1">* Şube Kodu</label>
-                <input type="text" value={gpBranchCode} onChange={(e) => setGpBranchCode(e.target.value)} placeholder="Örn: 001" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-white text-sm block mb-1">TC Kimlik No (Opsiyonel)</label>
-                <input type="text" value={gpTcno} onChange={(e) => setGpTcno(e.target.value)} placeholder="11 haneli TC kimlik numaranız" maxLength={11} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-              </div>
-            </div>
-          )}
+          {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
 
           {/* GalaxyPay Papara ek alanı */}
           {selected?.id === 'galaxypay' && galaxypayMethod === 'papara' && (
@@ -740,45 +663,7 @@ export default function DepositPage() {
                   </div>
                 )}
 
-                {/* GalaxyPay Banka Havalesi ek alanları (desktop) */}
-                {selected?.id === 'galaxypay' && galaxypayMethod === 'bank-transfer' && (
-                  <div className="space-y-3 mb-5">
-                    <div>
-                      <label className="text-white text-sm block mb-1">* IBAN</label>
-                      <input type="text" value={gpIban} onChange={(e) => setGpIban(e.target.value.toUpperCase())} placeholder="TR00 0000 0000 0000 0000 0000 00" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white font-mono text-sm" />
-                    </div>
-                    <div>
-                      <label className="text-white text-sm block mb-1">* Hesap Sahibi</label>
-                      <input type="text" value={gpAccountHolder} onChange={(e) => setGpAccountHolder(e.target.value)} placeholder="Ad Soyad" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                    </div>
-                    <div>
-                      <label className="text-white text-sm block mb-1">* Banka Adı</label>
-                      <input type="text" value={gpBankName} onChange={(e) => setGpBankName(e.target.value)} placeholder="Örn: Ziraat Bankası" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-white text-sm block mb-1">* Hesap Numarası</label>
-                        <input type="text" value={gpAccountNumber} onChange={(e) => setGpAccountNumber(e.target.value)} placeholder="Hesap no" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-white text-sm block mb-1">* Şube Kodu</label>
-                        <input type="text" value={gpBranchCode} onChange={(e) => setGpBranchCode(e.target.value)} placeholder="001" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-white text-sm block mb-1">TC Kimlik No (Opsiyonel)</label>
-                      <input type="text" value={gpTcno} onChange={(e) => setGpTcno(e.target.value)} placeholder="11 haneli TC kimlik numaranız" maxLength={11} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                    </div>
-                  </div>
-                )}
-
-                {/* GalaxyPay Papara ek alanı (desktop) */}
-                {selected?.id === 'galaxypay' && galaxypayMethod === 'papara' && (
-                  <div className="mb-5">
-                    <label className="text-white text-sm block mb-1">* Papara Numarası</label>
-                    <input type="text" value={gpPaparaNumber} onChange={(e) => setGpPaparaNumber(e.target.value)} placeholder="Papara hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-                  </div>
-                )}
+                {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
 
                 <button onClick={handleDeposit} disabled={isProcessing} className="w-full py-4 bg-[#00d4b4] text-black font-bold rounded-xl flex items-center justify-center gap-2 text-base disabled:opacity-60 disabled:cursor-not-allowed">
                   {isProcessing ? (
