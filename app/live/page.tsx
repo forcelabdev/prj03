@@ -22,7 +22,7 @@ export default function LiveBettingPage() {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState<boolean | null>(null)
-  const retryCountRef = useRef(0)
+  const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 2
   const [activePath, setActivePath] = useState<string>("")
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -113,31 +113,37 @@ export default function LiveBettingPage() {
       if (result.success && result.launchUrl) {
         setIsIframeLoading(true)
         setLiveUrl(result.launchUrl)
-        retryCountRef.current = 0
+        setRetryCount(0)
       } else if (result.errorCode === 'RATE_LIMITED') {
-        if (retryCountRef.current < maxRetries) {
+        if (retryCount < maxRetries) {
           setError("Bağlantı kuruluyor, lütfen bekleyiniz...")
-          retryCountRef.current++
-          setTimeout(() => { loadLiveGame(userId) }, 3000)
+          setRetryCount(retryCount + 1)
+          setTimeout(() => {
+            loadLiveGame(userId)
+          }, 3000)
           return;
         } else {
           setError("Sistem şu anda çok yoğun. Lütfen birkaç dakika sonra tekrar deneyin.")
         }
       } else {
-        if (retryCountRef.current < maxRetries) {
+        if (retryCount < maxRetries) {
           setError("Canlı bahisler yükleniyor...")
-          retryCountRef.current++
-          setTimeout(() => { loadLiveGame(userId) }, 3000)
+          setRetryCount(retryCount + 1)
+          setTimeout(() => {
+            loadLiveGame(userId)
+          }, 3000)
           return;
         } else {
           setError(result.error || "Canlı bahisler yüklenemedi. Lütfen daha sonra tekrar deneyin.")
         }
       }
     } catch (err) {
-      if (retryCountRef.current < maxRetries) {
+      if (retryCount < maxRetries) {
         setError("Bağlantı kuruluyor...")
-        retryCountRef.current++
-        setTimeout(() => { loadLiveGame(userId) }, 3000)
+        setRetryCount(retryCount + 1)
+        setTimeout(() => {
+          loadLiveGame(userId)
+        }, 3000)
       } else {
         setError("Bağlantı hatası. Lütfen daha sonra tekrar deneyin.")
       }

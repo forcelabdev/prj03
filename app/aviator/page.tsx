@@ -22,7 +22,7 @@ export default function AviatorPage() {
   const [isIframeLoading, setIsIframeLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState<boolean | null>(null)
-  const retryCountRef = useRef(0)
+  const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 2
   const [activePath, setActivePath] = useState<string>('')
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -114,31 +114,37 @@ export default function AviatorPage() {
       if (result.success && result.launchUrl) {
         setIsIframeLoading(true)
         setGameUrl(result.launchUrl)
-        retryCountRef.current = 0
+        setRetryCount(0)
       } else if (result.errorCode === 'RATE_LIMITED') {
-        if (retryCountRef.current < maxRetries) {
+        if (retryCount < maxRetries) {
           setError('Bağlantı kuruluyor...')
-          retryCountRef.current++
-          setTimeout(() => { loadGame(userId) }, 3000)
+          setRetryCount(retryCount + 1)
+          setTimeout(() => {
+            loadGame(userId)
+          }, 3000)
           return
         } else {
           setError('Sistem yoğun. Lütfen sonra tekrar deneyin.')
         }
       } else {
-        if (retryCountRef.current < maxRetries) {
+        if (retryCount < maxRetries) {
           setError('Aviator yükleniyor...')
-          retryCountRef.current++
-          setTimeout(() => { loadGame(userId) }, 3000)
+          setRetryCount(retryCount + 1)
+          setTimeout(() => {
+            loadGame(userId)
+          }, 3000)
           return
         } else {
           setError('Oyun şu anda açılamıyor. Lütfen daha sonra tekrar deneyin.')
         }
       }
     } catch (err) {
-      if (retryCountRef.current < maxRetries) {
+      if (retryCount < maxRetries) {
         setError('Bağlantı kuruluyor...')
-        retryCountRef.current++
-        setTimeout(() => { loadGame(userId) }, 3000)
+        setRetryCount(retryCount + 1)
+        setTimeout(() => {
+          loadGame(userId)
+        }, 3000)
       } else {
         setError('Bağlantı hatası.')
       }

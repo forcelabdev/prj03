@@ -106,27 +106,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ msg: 'Invalid JSON response', details: responseText.substring(0, 200) }, { status: 500 })
     }
-
-    // Backend 500 verse bile response body'de launch URL varsa 200 olarak don.
-    // "updateMissionProgress is not defined" gibi backend-side crash'ler oyun
-    // acilmasini engellememelidir — URL uretilmis demektir.
-    const launchUrl =
-      data?.launch_url   ||
-      data?.game_url     ||
-      data?.iframe_url   ||
-      data?.url          ||
-      data?.gameUrl      ||
-      data?.launchUrl    ||
-      data?.game_launch_url ||
-      data?.result?.url  ||
-      data?.result?.launch_url ||
-      data?.data?.url    ||
-      data?.data?.launch_url
-
-    if (!response.ok && launchUrl) {
-      return NextResponse.json(data, { status: 200 })
-    }
-
+    
     return NextResponse.json(data, { status: response.ok ? 200 : response.status })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'

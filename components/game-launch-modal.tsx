@@ -585,7 +585,6 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
 
       // Once game_code ile GET /games/:game_code → distribution + provider_code al
       const rawGameCode = (game as any).game_code || (game as any).gameCode || game.id || ""
-
       const detail = await gamesService.getGameDetails(rawGameCode)
 
       let distribution = (game as any).distribution || ""
