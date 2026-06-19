@@ -107,28 +107,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ msg: 'Invalid JSON response', details: responseText.substring(0, 200) }, { status: 500 })
     }
 
-    // Backend 500 verse bile response body'de launch URL varsa 200 olarak don.
+    // Tum olasi URL field adlarini kontrol et (nested dahil)
+    const extractUrl = (d: Record<string, unknown>): string | undefined =>
+      (d?.launch_url || d?.game_url || d?.iframe_url || d?.url ||
+       d?.gameUrl || d?.launchUrl || d?.game_launch_url ||
+       (d?.result as Record<string, unknown>)?.url ||
+       (d?.result as Record<string, unknown>)?.launch_url ||
+       (d?.data as Record<string, unknown>)?.url ||
+       (d?.data as Record<string, unknown>)?.launch_url) as string | undefined
+
+    const launchUrl = extractUrl(data)
+
+    // Backend 500 verse bile URL varsa 200 olarak don.
     // "updateMissionProgress is not defined" gibi backend-side crash'ler oyun
     // acilmasini engellememelidir — URL uretilmis demektir.
-    const launchUrl =
-      data?.launch_url   ||
-      data?.game_url     ||
-      data?.iframe_url   ||
-      data?.url          ||
-      data?.gameUrl      ||
-      data?.launchUrl    ||
-      data?.game_launch_url ||
-      data?.result?.url  ||
-      data?.result?.launch_url ||
-      data?.data?.url    ||
-      data?.data?.launch_url
-
     if (!response.ok && launchUrl) {
       return NextResponse.json(data, { status: 200 })
     }
 
-    // Backend INTERNAL_ERROR (updateMissionProgress gibi backend bug) → kullanıcıya anlamlı mesaj
-    if (data?.msg === 'INTERNAL_ERROR' || data?.error?.includes?.('is not defined')) {
+    // Raw response text icinde URL var mi kontrol et (bazen JSON field'i farkli olabilir)
+    if (!response.ok && responseText.includes('http')) {
+      const urlMatch = responseText.match(/https?:\/\/[^\s"']+/)
+      if (urlMatch) {
+        return NextResponse.json({ launch_url: urlMatch[0], ...data }, { status: 200 })
+      }
+    }
+
+    // Backend INTERNAL_ERROR — error field string veya object olabilir
+    const errorStr = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error || '')
+    const isMissionError = errorStr.includes('is not defined') || errorStr.includes('updateMission')
+    if (data?.msg === 'INTERNAL_ERROR' && isMissionError) {
+      // Betinovi bazen URL uretip sonra mission crash yapiyor — tekrar dene (isDemo=true ile)
+      // Eger demo modda URL alabiliyorsak real mode icin de genellikle calisir
       return NextResponse.json({
         msg: 'GAME_UNAVAILABLE',
         error: 'Bu oyun şu anda bakımda. Lütfen daha sonra tekrar deneyin.',
