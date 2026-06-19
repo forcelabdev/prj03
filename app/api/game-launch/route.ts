@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://apievrymatrix5d84k321.com'
 const AGENT_TOKEN = process.env.NEXT_PUBLIC_AGENT_TOKEN || ''
 
-// SERVER-SIDE RATE LIMITING - SADECE sport-bbbet icin, per user 3 saniye cooldown
+// SERVER-SIDE RATE LIMITING - per user, 6 saniye cooldown
 const userLastRequestMap = new Map<string, number>()
-const RATE_LIMIT_MS = 3000 // 3 saniye (retry interval ile esit)
+const RATE_LIMIT_MS = 6000 // 6 saniye
 
 const getHeaders = (authHeader: string | null): Record<string, string> => ({
   'Content-Type': 'application/json',
@@ -20,23 +20,23 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('Authorization')
     const { distribution, userId, vendorCode, gameCode, language = 'tr', numericId = '', channel = 'desktop', domain, mirror, isDemo = false } = body
 
-    // RATE LIMIT CHECK - YALNIZCA sport-bbbet icin, diger oyunlara uygulanmaz
+    // RATE LIMIT CHECK - sport-bbbet icin per-user 6 saniye
     if (vendorCode === 'sport-bbbet' && userId) {
       const now = Date.now()
-      const rateKey = `sport-${userId}`
-      const lastRequest = userLastRequestMap.get(rateKey) || 0
+      const lastRequest = userLastRequestMap.get(userId) || 0
       const timeSinceLastRequest = now - lastRequest
-
+      
       if (timeSinceLastRequest < RATE_LIMIT_MS) {
         const waitTime = Math.ceil((RATE_LIMIT_MS - timeSinceLastRequest) / 1000)
-        return NextResponse.json({
+        return NextResponse.json({ 
           msg: `Rate limited. Please wait ${waitTime} seconds.`,
           status: 'RATE_LIMITED',
-          retryAfter: waitTime
+          retryAfter: waitTime 
         }, { status: 429 })
       }
-
-      userLastRequestMap.set(rateKey, now)
+      
+      // Update last request time
+      userLastRequestMap.set(userId, now)
     }
 
     const dist = (distribution || '').toLowerCase()
@@ -106,45 +106,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ msg: 'Invalid JSON response', details: responseText.substring(0, 200) }, { status: 500 })
     }
-
-    // Tum olasi URL field adlarini kontrol et (nested dahil)
-    const extractUrl = (d: Record<string, unknown>): string | undefined =>
-      (d?.launch_url || d?.game_url || d?.iframe_url || d?.url ||
-       d?.gameUrl || d?.launchUrl || d?.game_launch_url ||
-       (d?.result as Record<string, unknown>)?.url ||
-       (d?.result as Record<string, unknown>)?.launch_url ||
-       (d?.data as Record<string, unknown>)?.url ||
-       (d?.data as Record<string, unknown>)?.launch_url) as string | undefined
-
-    const launchUrl = extractUrl(data)
-
-    // Backend 500 verse bile URL varsa 200 olarak don.
-    // "updateMissionProgress is not defined" gibi backend-side crash'ler oyun
-    // acilmasini engellememelidir — URL uretilmis demektir.
-    if (!response.ok && launchUrl) {
-      return NextResponse.json(data, { status: 200 })
-    }
-
-    // Raw response text icinde URL var mi kontrol et (bazen JSON field'i farkli olabilir)
-    if (!response.ok && responseText.includes('http')) {
-      const urlMatch = responseText.match(/https?:\/\/[^\s"']+/)
-      if (urlMatch) {
-        return NextResponse.json({ launch_url: urlMatch[0], ...data }, { status: 200 })
-      }
-    }
-
-    // Backend INTERNAL_ERROR — error field string veya object olabilir
-    const errorStr = typeof data?.error === 'string' ? data.error : JSON.stringify(data?.error || '')
-    const isMissionError = errorStr.includes('is not defined') || errorStr.includes('updateMission')
-    if (data?.msg === 'INTERNAL_ERROR' && isMissionError) {
-      // Betinovi bazen URL uretip sonra mission crash yapiyor — tekrar dene (isDemo=true ile)
-      // Eger demo modda URL alabiliyorsak real mode icin de genellikle calisir
-      return NextResponse.json({
-        msg: 'GAME_UNAVAILABLE',
-        error: 'Bu oyun şu anda bakımda. Lütfen daha sonra tekrar deneyin.',
-      }, { status: 503 })
-    }
-
+    
     return NextResponse.json(data, { status: response.ok ? 200 : response.status })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'

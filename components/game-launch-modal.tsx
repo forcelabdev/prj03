@@ -73,8 +73,6 @@ function DesktopMultiLauncher({
 
   const { launchGame } = useGameLaunch()
   const { user } = useAuth()
-  const launchRetryRef = useRef(0)
-  const MAX_LAUNCH_RETRIES = 3
 
   // Load categories once
   useEffect(() => {
@@ -129,8 +127,8 @@ function DesktopMultiLauncher({
       return next
     })
     try {
-      const userId = user?.identifier || user?.id || ""
-      const numericId = String(user?.numericId || user?.identifier || user?.id || "")
+      const userId = user?.id || ""
+      const numericId = user?.identifier || user?.id || ""
       const rawCode = game.game_code || game.gameCode || game.id || ""
       const detail = await gamesService.getGameDetails(rawCode)
       let distribution = game.distribution || ""
@@ -582,20 +580,15 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
     setLaunchError(null)
 
     try {
-      // Her yeni oyun acilisinda retry sayacini sifirla
-      if (launchRetryRef.current > 0 && game !== (launchRetryRef as any)._lastGame) {
-        launchRetryRef.current = 0
-      }
-      ;(launchRetryRef as any)._lastGame = game
-
-      // Backend user_id olarak identifier bekliyor, MongoDB _id degil
-      const userId = user?.identifier || user?.id || ""
-      const numericId = String(user?.numericId || user?.identifier || user?.id || "")
+      const userId = user?.id || ""
+      const numericId = user?.identifier || user?.id || ""
 
       // Once game_code ile GET /games/:game_code → distribution + provider_code al
       const rawGameCode = (game as any).game_code || (game as any).gameCode || game.id || ""
+      console.log('[v0] handlePlay — rawGameCode:', rawGameCode, '| game object:', game)
 
       const detail = await gamesService.getGameDetails(rawGameCode)
+      console.log('[v0] getGameDetails response:', detail)
 
       let distribution = (game as any).distribution || ""
       let vendorCode = (game as any).provider_code || (game as any).providerCode || game.provider || ""
@@ -608,22 +601,19 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         gameCode = g.game_code || gameCode
       }
 
+      console.log('[v0] launchGame params — userId:', userId, '| vendorCode:', vendorCode, '| gameCode:', gameCode, '| distribution:', distribution, '| numericId:', numericId)
+
       if (!gameCode) { setLaunchError("Oyun kodu bulunamadi"); setIsLaunching(false); return }
 
       const result = await launchGame(userId, vendorCode, gameCode, "tr", distribution, numericId, demo)
+      console.log('[v0] launchGame result:', result)
 
       if (result.success && result.launchUrl) {
         setGameUrl(result.launchUrl)
       } else {
         const code = (result as any).errorCode || ""
         if (code === "RATE_LIMITED") {
-          // Max 3 retry — sonrasinda hata goster
-          if (launchRetryRef.current < MAX_LAUNCH_RETRIES) {
-            launchRetryRef.current++
-            setTimeout(() => handlePlay(game, demo), 3000)
-            return
-          }
-          setLaunchError("Sistem şu anda meşgul. Lütfen birkaç saniye sonra tekrar deneyin.")
+          setLaunchError("Lütfen birkaç saniye bekleyip tekrar deneyin.")
         } else if (code === "INVALID_REQUEST" || result.error?.includes("user_id is required")) {
           setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")
         } else if (code === "PROVIDER_DISABLED") {
@@ -635,6 +625,7 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         }
       }
     } catch (e: any) {
+      console.log('[v0] handlePlay catch error:', e)
       const msg = e?.response?.data?.msg || ""
       if (msg === "INVALID_REQUEST" || e?.message?.includes("user_id is required")) {
         setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")

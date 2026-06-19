@@ -243,27 +243,32 @@ export const gamesService = {
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
 
     // Tum game launch istekleri /api/game-launch uzerinden gider
+    const requestPayload = {
+      distribution,
+      userId,
+      vendorCode,
+      gameCode,
+      language,
+      numericId,
+      channel: isMobile ? 'mobile' : 'desktop',
+      domain,
+      mirror,
+      isDemo,
+    }
+    console.log('[v0] launchGame request payload:', requestPayload)
+
     const res = await fetch('/api/game-launch', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
       },
-      body: JSON.stringify({
-        distribution,
-        userId,
-        vendorCode,
-        gameCode,
-        language,
-        numericId,
-        channel: isMobile ? 'mobile' : 'desktop',
-        domain,
-        mirror,
-        isDemo,
-      }),
+      body: JSON.stringify(requestPayload),
     })
 
     const d = await res.json()
+    console.log('[v0] launchGame raw response (status=' + res.status + '):', d)
+
     // Tum olasi URL field adlarini kontrol et
     const url = d?.launch_url 
       || d?.game_url 
@@ -276,17 +281,17 @@ export const gamesService = {
       || d?.result?.launch_url
       || d?.data?.url
       || d?.data?.launch_url
-    if (url) return { success: true, launchUrl: url }
-    const msg = d?.msg || d?.message || ''
-    // Backend bakım hatası — doğrudan anlamlı mesajı döndür
-    if (msg === 'GAME_UNAVAILABLE') {
-      return { success: false, error: d?.error || 'Bu oyun şu anda bakımda. Lütfen daha sonra tekrar deneyin.', errorCode: 'GAME_UNAVAILABLE' }
+    if (url) {
+      console.log('[v0] launchGame success, url:', url)
+      return { success: true, launchUrl: url }
     }
+    const msg = d?.msg || d?.message || ''
     const rawDetail = d?.details || d?.error?.error || d?.error || msg || 'Oyun baslatilamadi'
     const rawStr = typeof rawDetail === 'string' ? rawDetail : JSON.stringify(rawDetail)
+    console.log('[v0] launchGame failed — msg:', msg, '| rawDetail:', rawStr)
     // Ham API teknik mesajlarını kullanıcıya gösterme
-    const isTechnical = rawStr.includes('input=') || rawStr.includes('Delay time') || rawStr.includes('timeout=') || rawStr.includes('GetGameUrl') || rawStr.includes('is not defined')
-    const errDetail = isTechnical ? 'Oyun şu anda açılamıyor. Lütfen daha sonra tekrar deneyin.' : rawStr
+    const isTechnical = rawStr.includes('input=') || rawStr.includes('Delay time') || rawStr.includes('timeout=') || rawStr.includes('GetGameUrl')
+    const errDetail = isTechnical ? 'Oyun baslatilamadi' : rawStr
     return { success: false, error: errDetail, errorCode: msg }
   },
 
