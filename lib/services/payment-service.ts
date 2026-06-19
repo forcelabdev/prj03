@@ -1,6 +1,7 @@
 // Payment Service - Backend API dokumantasyonuna gore
 import apiClient from '../api-client';
 import tokenManager from '../token-manager';
+import { galaxypayService } from './galaxypay-service';
 
 export interface DepositMethod {
   id: string;
@@ -57,6 +58,7 @@ export interface WithdrawRequest {
 
 // Statik ödeme yöntemleri (backend'de endpoint yoksa kullanılır)
 const DEPOSIT_METHODS: DepositMethod[] = [
+  { id: 'galaxypay',           name: 'GalaxyPay',           logo: 'GLXPAY',  icon: '/images/galaxypay.png',          desc: 'Anında', min: '₺100,00',   max: '₺100.000,00',  type: 'bank',    favorite: true },
   { id: 'meeldev',            name: 'Capora Havale',       logo: 'CAPORA',  icon: '/images/capora-havale.png',      desc: 'Anında', min: '₺1.000,00', max: '₺100.000,00',  type: 'bank',    favorite: true },
   { id: 'usdt-trc20',         name: 'Tether (USDT)',        logo: 'USDT',    icon: '/images/kriptobpusdttrs20.webp', desc: '10-30 dk', min: '10 USDT',   max: '50.000 USDT', type: 'crypto', favorite: true },
   { id: 'btc',                name: 'Bitcoin',             logo: 'BTC',     icon: '/images/kriptobpbtc.svg',        desc: '30-60 dk', min: '0.001 BTC', max: '10 BTC',   type: 'crypto',  favorite: true },
@@ -103,6 +105,19 @@ export const paymentService = {
         if (existing) {
           existing.min = `₺${(meelDev.minAmount || 1000).toLocaleString('tr-TR')},00`;
           existing.max = `₺${(meelDev.maxAmount || 100000).toLocaleString('tr-TR')},00`;
+        }
+      }
+      const galaxyPay = siteRes.data?.galaxyPay ?? siteRes.data?.data?.galaxyPay;
+      if (galaxyPay?.isActive === false) {
+        // Backend'de kapaliysa listeden cikar
+        const idx = methods.findIndex(m => m.id === 'galaxypay');
+        if (idx !== -1) methods.splice(idx, 1);
+      } else if (galaxyPay) {
+        const existing = methods.find(m => m.id === 'galaxypay');
+        if (existing) {
+          existing.min = `₺${(galaxyPay.minAmount || 100).toLocaleString('tr-TR')},00`;
+          existing.max = `₺${(galaxyPay.maxAmount || 100000).toLocaleString('tr-TR')},00`;
+          if (galaxyPay.name) existing.name = galaxyPay.name;
         }
       }
     } catch { /* ignore, statik listeye fallback */ }
@@ -318,6 +333,19 @@ export const paymentService = {
       case 'echopayz': {
         const echoRes = await this.createEchopayzDeposit(data.amount);
         return { success: echoRes.success, paymentUrl: echoRes.data?.redirectUrl, error: echoRes.error };
+      }
+      case 'galaxypay': {
+        // POST /payment/galaxypay/deposit - Zorunlu auth
+        // method varsayilan olarak "lobby" (redirectli odeme sayfasi)
+        if (!tokenManager.getToken()) return { success: false, error: 'Lütfen giriş yapın' };
+        const gpRes = await galaxypayService.createDeposit(data.amount, 'lobby');
+        if (gpRes.success && gpRes.paymentUrl) {
+          return { success: true, paymentUrl: gpRes.paymentUrl };
+        }
+        if (gpRes.success && gpRes.transactionId) {
+          return { success: true, paymentUrl: undefined };
+        }
+        return { success: false, error: gpRes.error || 'GalaxyPay yatırım başlatılamadı' };
       }
       case 'meeldev': {
         // POST /payment/meeldev/deposit - Zorunlu auth

@@ -14,6 +14,7 @@ import { UnauthorizedPage } from "@/components/unauthorized-page"
 import { tokenManager } from "@/lib/token-manager"
 import { paymentService, type DepositMethod } from "@/lib/services/payment-service"
 import { meeldevService } from "@/lib/services/meeldev-service"
+import { galaxypayService } from "@/lib/services/galaxypay-service"
 import { DepositConfirmModal } from "@/components/deposit-confirm-modal"
 
 export default function DepositPage() {
@@ -30,7 +31,7 @@ export default function DepositPage() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
-  const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev'
+  const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
   const isCrypto = selected?.type === 'crypto'
   const [copied, setCopied] = useState(false)
 
@@ -104,12 +105,14 @@ export default function DepositPage() {
           
           // MeelDev için Capora Havale logosunu kullan
           iconsMap['meeldev'] = '/images/capora-havale.png';
+          // GalaxyPay logo
+          iconsMap['galaxypay'] = '/images/galaxypay.png';
 
           // Gizlenecek yöntemler - ID ve name'e göre check et
           const excludeIds = ['papara', 'payfix', 'jetbank-transfer', 'banka-havalesi', 'mpay-fast-havale', 'mpay-fast', 'trust-para', 'trustpara', 'bank-transfer', 'banka']
           const excludeNames = ['papara', 'payfix', 'jetbank', 'trust para', 'trustpara']
           // Whitelist - bu id'ler exclude edilmez
-          const whitelistIds = ['meeldev']
+          const whitelistIds = ['meeldev', 'galaxypay']
           
           // Filtre ve icon ekleme
           const filtered = response.methods
@@ -128,7 +131,7 @@ export default function DepositPage() {
               const icon = iconsMap[iconKey]
               
               // Sadece bu yöntemi favori olarak işaretle
-              const favoriteIds = ['usdt-trc20', 'btc', 'eth', 'trx', 'usdt-erc20', 'meeldev', 'super-havale', 'mpay-havale', 'hizli-odeme-havale', 'maxi-havale']
+              const favoriteIds = ['usdt-trc20', 'btc', 'eth', 'trx', 'usdt-erc20', 'galaxypay', 'meeldev', 'super-havale', 'mpay-havale', 'hizli-odeme-havale', 'maxi-havale']
               const isFavorite = favoriteIds.includes(method.id)
               
               // Kripto ve Capora Havale için min/max değerlerini override et
@@ -170,8 +173,10 @@ export default function DepositPage() {
                 'eth': 2,
                 'trx': 3,
                 'usdt-erc20': 4,
-                // Capora Havale - kripto sonras������, havale öncesi
-                'meeldev': 5,
+                // GalaxyPay - kripto sonrasi, meeldev oncesi
+                'galaxypay': 5,
+                // Capora Havale - galaxypay sonrasi
+                'meeldev': 6,
                 // Transfer yöntemleri
                 'super-havale': 6,
                 'maxi-havale': 7,
@@ -257,6 +262,14 @@ export default function DepositPage() {
       window.location.href = url.toString()
       return
     }
+    // GalaxyPay için min tutar kontrolü
+    if (selected.id === 'galaxypay' && needsAmountInput) {
+      const parsed = parseFloat(depositAmount)
+      if (!depositAmount || isNaN(parsed) || parsed < 100) {
+        alert('GalaxyPay için minimum yatırım tutarı ₺100 olmalıdır.')
+        return
+      }
+    }
     // Capora Havale için min tutar kontrolü
     if (selected.id === 'meeldev' && needsAmountInput) {
       const parsed = parseFloat(depositAmount)
@@ -281,6 +294,10 @@ export default function DepositPage() {
       alert('Lütfen geçerli bir tutar girin.')
       return
     }
+    if (selected.id === 'galaxypay' && needsAmountInput && amount < 100) {
+      alert('GalaxyPay için minimum yatırım tutarı ₺100 olmalıdır.')
+      return
+    }
     if (selected.id === 'meeldev' && needsAmountInput && amount < 1000) {
       alert('Capora Havale için minimum yatırım tutarı ₺1.000 olmalıdır.')
       return
@@ -289,7 +306,20 @@ export default function DepositPage() {
     setIsProcessing(true)
     try {
       const returnUrl = `${window.location.origin}/deposit`
-      
+
+      // GalaxyPay - Lobby yontemine yonlendir
+      if (selected.id === 'galaxypay') {
+        const gpRes = await galaxypayService.createDeposit(amount, 'lobby')
+        if (gpRes.success && gpRes.paymentUrl) {
+          window.location.href = gpRes.paymentUrl
+        } else if (gpRes.success) {
+          alert('GalaxyPay işleminiz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+        } else {
+          alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+        }
+        return
+      }
+
       // jetbak-transfer için özel format
       if (selected.id === 'jetbak-transfer') {
         const token = tokenManager.getToken() || ''
@@ -405,10 +435,11 @@ export default function DepositPage() {
                         type="number"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
-                        placeholder={selected?.id === 'meeldev' ? 'Min: 1.000 ₺' : '0,00'}
-                        min={selected?.id === 'meeldev' ? 1000 : 1}
+                        placeholder={selected?.id === 'meeldev' ? 'Min: 1.000 ₺' : selected?.id === 'galaxypay' ? 'Min: 100 ₺' : '0,00'}
+                        min={selected?.id === 'meeldev' ? 1000 : selected?.id === 'galaxypay' ? 100 : 1}
                         className={`w-full bg-zinc-800 border rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none transition-colors ${
-                          selected?.id === 'meeldev' && depositAmount && parseFloat(depositAmount) < 1000
+                          ((selected?.id === 'meeldev' && depositAmount && parseFloat(depositAmount) < 1000) ||
+                           (selected?.id === 'galaxypay' && depositAmount && parseFloat(depositAmount) < 100))
                             ? 'border-red-500 focus:border-red-500'
                             : 'border-zinc-700 focus:border-[#00d4b4]'
                         }`}
@@ -418,6 +449,12 @@ export default function DepositPage() {
                 <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                   Minimum yatırım tutarı ₺1.000,00 olmalıdır.
+                </p>
+              )}
+              {selected?.id === 'galaxypay' && depositAmount && parseFloat(depositAmount) < 100 && (
+                <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                  Minimum yatırım tutarı ₺100,00 olmalıdır.
                 </p>
               )}
             </div>
