@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { paymentService, type WithdrawMethod } from "@/lib/services/payment-service"
 import { tokenManager } from "@/lib/token-manager"
 import { meeldevService } from "@/lib/services/meeldev-service"
+import { galaxypayService } from "@/lib/services/galaxypay-service"
 import { transactionService } from "@/lib/services/transaction-service"
 
 // Geçici maintenance mode - çekim işlevleri devre dışı
@@ -21,6 +22,8 @@ const MAINTENANCE_MESSAGE = "Çekim sistemi geçici olarak bakımda. Lütfen dah
 
 // Tum cekim yontemleri - her yontem icin ayni POST /auth/bank-withdraw akisi
 const ALL_WITHDRAW_METHODS: WithdrawMethod[] = [
+  { id: 'galaxypay-bank',   name: 'GalaxyPay Havale',  logo: 'GLXPAY', icon: '/images/galaxypay.png',          desc: 'Anında', min: '100 TL',  max: '100.000 TL', type: 'bank' },
+  { id: 'galaxypay-papara', name: 'GalaxyPay Papara',  logo: 'GLXPAY', icon: '/images/galaxypay.png',          desc: 'Anında', min: '100 TL',  max: '100.000 TL', type: 'ewallet' },
   { id: 'super-havale',  name: 'Super Havale',  logo: 'SUPER',  icon: '/logos/super-havale.svg',  desc: 'Anında', min: '100 TL',  max: '100.000 TL', type: 'bank', paymentUrl: 'https://www.superhavale.net' },
   { id: 'maxi-havale',   name: 'Maxi Havale',   logo: 'MAXI',   icon: '/logos/maxi-havale.svg',   desc: 'Anında', min: '100 TL',  max: '100.000 TL', type: 'bank', paymentUrl: 'https://www.luqapays.com' },
   { id: 'mpay-havale',   name: 'MPay Havale',   logo: 'MPAY',   icon: '/logos/mpay.svg',         desc: 'Anında', min: '100 TL',  max: '1.000.000 TL', type: 'bank', paymentUrl: 'https://www.luqapays.com' },
@@ -127,8 +130,15 @@ export default function WithdrawPage() {
       setError("Geçerli bir tutar girin")
       return
     }
+    // GalaxyPay Bank Transfer için özel validasyon
+    if (selected.id === 'galaxypay-bank') {
+      if (!bankAccount) { setError("Lütfen IBAN numaranızı girin"); return }
+      if (!accountHolder) { setError("Lütfen hesap sahibi adını girin"); return }
+      if (!bankName) { setError("Lütfen banka adını girin"); return }
+    } else if (selected.id === 'galaxypay-papara') {
+      if (!bankAccount) { setError("Lütfen Papara numaranızı girin"); return }
     // MeelDev için özel validasyon
-    if (selected.id === 'meeldev') {
+    } else if (selected.id === 'meeldev') {
       if (!bankAccount) { setError("Lütfen IBAN numaranızı girin"); return }
       if (!accountHolder) { setError("Lütfen hesap sahibi adını girin"); return }
       if (!bankName) { setError("Lütfen banka adını girin"); return }
@@ -148,6 +158,43 @@ export default function WithdrawPage() {
     setError("")
 
     try {
+      // GalaxyPay Bank Transfer çekim akışı
+      if (selected.id === 'galaxypay-bank') {
+        const gpRes = await galaxypayService.createWithdraw({
+          amount: parsedAmount,
+          method: 'bank-transfer',
+          accountHolder,
+          iban: bankAccount,
+          bankName,
+        })
+        if (gpRes.success) {
+          setSuccess(gpRes.message || "Çekim talebi oluşturuldu. Admin onayı bekleniyor.")
+          setAmount(""); setBankAccount(""); setAccountHolder(""); setBankName("")
+        } else {
+          setError(gpRes.error || "GalaxyPay çekim talebi oluşturulamadı")
+        }
+        setIsSubmitting(false)
+        return
+      }
+
+      // GalaxyPay Papara çekim akışı
+      if (selected.id === 'galaxypay-papara') {
+        const gpRes = await galaxypayService.createWithdraw({
+          amount: parsedAmount,
+          method: 'papara',
+          accountNumber: bankAccount,
+          accountHolder: accountHolder || undefined,
+        })
+        if (gpRes.success) {
+          setSuccess(gpRes.message || "Çekim talebi oluşturuldu. Admin onayı bekleniyor.")
+          setAmount(""); setBankAccount(""); setAccountHolder("")
+        } else {
+          setError(gpRes.error || "GalaxyPay Papara çekim talebi oluşturulamadı")
+        }
+        setIsSubmitting(false)
+        return
+      }
+
       // MeelDev çekim akışı
       if (selected.id === 'meeldev') {
         const res = await meeldevService.createWithdraw({
@@ -238,7 +285,7 @@ export default function WithdrawPage() {
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3 font-mono tracking-wider"
             />
           </div>
-          {selected?.id === 'meeldev' && (
+          {(selected?.id === 'meeldev' || selected?.id === 'galaxypay-bank') && (
             <>
               <div>
                 <label className="text-white text-sm block mb-2">* Hesap Sahibi</label>
@@ -262,6 +309,31 @@ export default function WithdrawPage() {
               </div>
             </>
           )}
+        </>
+      )}
+
+      {selected?.id === 'galaxypay-papara' && (
+        <>
+          <div>
+            <label className="text-white text-sm block mb-2">* Papara Numarası</label>
+            <input
+              type="text"
+              value={bankAccount}
+              onChange={(e) => setBankAccount(e.target.value)}
+              placeholder="Papara hesap numaranız"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
+            />
+          </div>
+          <div>
+            <label className="text-white text-sm block mb-2">Hesap Sahibi (Opsiyonel)</label>
+            <input
+              type="text"
+              value={accountHolder}
+              onChange={(e) => setAccountHolder(e.target.value)}
+              placeholder="Ad Soyad"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
+            />
+          </div>
         </>
       )}
 
