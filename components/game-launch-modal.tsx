@@ -127,8 +127,8 @@ function DesktopMultiLauncher({
       return next
     })
     try {
-      const userId = user?.id || ""
-      const numericId = user?.identifier || user?.id || ""
+      const userId = user?.identifier || user?.id || ""
+      const numericId = String(user?.numericId || user?.identifier || user?.id || "")
       const rawCode = game.game_code || game.gameCode || game.id || ""
       const detail = await gamesService.getGameDetails(rawCode)
       let distribution = game.distribution || ""
@@ -580,8 +580,9 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
     setLaunchError(null)
 
     try {
-      const userId = user?.id || ""
-      const numericId = user?.identifier || user?.id || ""
+      // Backend user_id olarak identifier bekliyor, MongoDB _id degil
+      const userId = user?.identifier || user?.id || ""
+      const numericId = String(user?.numericId || user?.identifier || user?.id || "")
 
       // Once game_code ile GET /games/:game_code → distribution + provider_code al
       const rawGameCode = (game as any).game_code || (game as any).gameCode || game.id || ""
