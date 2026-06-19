@@ -335,17 +335,9 @@ export const paymentService = {
         return { success: echoRes.success, paymentUrl: echoRes.data?.redirectUrl, error: echoRes.error };
       }
       case 'galaxypay': {
-        // POST /payment/galaxypay/deposit - Zorunlu auth
-        // method varsayilan olarak "lobby" (redirectli odeme sayfasi)
-        if (!tokenManager.getToken()) return { success: false, error: 'Lütfen giriş yapın' };
-        const gpRes = await galaxypayService.createDeposit(data.amount, 'lobby');
-        if (gpRes.success && gpRes.paymentUrl) {
-          return { success: true, paymentUrl: gpRes.paymentUrl };
-        }
-        if (gpRes.success && gpRes.transactionId) {
-          return { success: true, paymentUrl: undefined };
-        }
-        return { success: false, error: gpRes.error || 'GalaxyPay yatırım başlatılamadı' };
+        // Deposit sayfası artık direkt galaxypayService kullanıyor.
+        // Bu dal yalnızca fallback olarak kalır.
+        return { success: false, error: 'GalaxyPay deposit işlemi sayfadan başlatılmalıdır.' };
       }
       case 'meeldev': {
         // POST /payment/meeldev/deposit - Zorunlu auth

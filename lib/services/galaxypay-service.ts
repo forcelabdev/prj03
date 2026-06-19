@@ -102,9 +102,16 @@ export const galaxypayService = {
       paparaNumber?: string
     }
   ): Promise<GalaxyPayDepositResponse> {
+    // undefined alanlari temizle, method'u sabitle
+    const body: Record<string, unknown> = { amount, method }
+    if (extra) {
+      for (const [k, v] of Object.entries(extra)) {
+        if (v !== undefined && v !== null && v !== '') body[k] = v
+      }
+    }
     const response = await apiClient.post<{ success: boolean; message: string; data: GalaxyPayDepositResponse }>(
       '/payment/galaxypay/deposit',
-      { amount, method, ...extra },
+      body,
       true
     )
     if (response.success && response.data?.data) {
