@@ -73,6 +73,8 @@ function DesktopMultiLauncher({
 
   const { launchGame } = useGameLaunch()
   const { user } = useAuth()
+  const launchRetryRef = useRef(0)
+  const MAX_LAUNCH_RETRIES = 3
 
   // Load categories once
   useEffect(() => {
@@ -580,6 +582,12 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
     setLaunchError(null)
 
     try {
+      // Her yeni oyun acilisinda retry sayacini sifirla
+      if (launchRetryRef.current > 0 && game !== (launchRetryRef as any)._lastGame) {
+        launchRetryRef.current = 0
+      }
+      ;(launchRetryRef as any)._lastGame = game
+
       // Backend user_id olarak identifier bekliyor, MongoDB _id degil
       const userId = user?.identifier || user?.id || ""
       const numericId = String(user?.numericId || user?.identifier || user?.id || "")
@@ -609,9 +617,13 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
       } else {
         const code = (result as any).errorCode || ""
         if (code === "RATE_LIMITED") {
-          // Sessizce 3 saniye bekleyip tekrar dene, kullaniciya mesaj gosterme
-          setTimeout(() => handlePlay(game, demo), 3000)
-          return
+          // Max 3 retry — sonrasinda hata goster
+          if (launchRetryRef.current < MAX_LAUNCH_RETRIES) {
+            launchRetryRef.current++
+            setTimeout(() => handlePlay(game, demo), 3000)
+            return
+          }
+          setLaunchError("Sistem şu anda meşgul. Lütfen birkaç saniye sonra tekrar deneyin.")
         } else if (code === "INVALID_REQUEST" || result.error?.includes("user_id is required")) {
           setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")
         } else if (code === "PROVIDER_DISABLED") {
