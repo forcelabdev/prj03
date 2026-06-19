@@ -123,6 +123,8 @@ export async function POST(req: NextRequest) {
       data?.data?.url    ||
       data?.data?.launch_url
 
+    console.log('[v0] game-launch backend status:', response.status, '| launchUrl found:', !!launchUrl, '| data keys:', Object.keys(data || {}), '| raw:', JSON.stringify(data)?.substring(0, 300))
+
     if (!response.ok && launchUrl) {
       return NextResponse.json(data, { status: 200 })
     }
