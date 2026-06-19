@@ -585,10 +585,8 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
 
       // Once game_code ile GET /games/:game_code → distribution + provider_code al
       const rawGameCode = (game as any).game_code || (game as any).gameCode || game.id || ""
-      console.log('[v0] handlePlay — rawGameCode:', rawGameCode, '| game object:', game)
 
       const detail = await gamesService.getGameDetails(rawGameCode)
-      console.log('[v0] getGameDetails response:', detail)
 
       let distribution = (game as any).distribution || ""
       let vendorCode = (game as any).provider_code || (game as any).providerCode || game.provider || ""
@@ -601,12 +599,9 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         gameCode = g.game_code || gameCode
       }
 
-      console.log('[v0] launchGame params — userId:', userId, '| vendorCode:', vendorCode, '| gameCode:', gameCode, '| distribution:', distribution, '| numericId:', numericId)
-
       if (!gameCode) { setLaunchError("Oyun kodu bulunamadi"); setIsLaunching(false); return }
 
       const result = await launchGame(userId, vendorCode, gameCode, "tr", distribution, numericId, demo)
-      console.log('[v0] launchGame result:', result)
 
       if (result.success && result.launchUrl) {
         setGameUrl(result.launchUrl)
@@ -625,7 +620,6 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         }
       }
     } catch (e: any) {
-      console.log('[v0] handlePlay catch error:', e)
       const msg = e?.response?.data?.msg || ""
       if (msg === "INVALID_REQUEST" || e?.message?.includes("user_id is required")) {
         setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")
