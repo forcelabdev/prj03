@@ -45,8 +45,12 @@ export default function WithdrawPage() {
 
   const [amount, setAmount] = useState("")
   const [bankAccount, setBankAccount] = useState("")   // IBAN veya hesap no
-  const [accountHolder, setAccountHolder] = useState("") // Hesap sahibi (MeelDev)
-  const [bankName, setBankName] = useState("")           // Banka adı (MeelDev)
+  const [accountHolder, setAccountHolder] = useState("") // Hesap sahibi (MeelDev / GalaxyPay)
+  const [bankName, setBankName] = useState("")           // Banka adı (MeelDev / GalaxyPay)
+  const [bankId, setBankId] = useState("")               // GalaxyPay bankId
+  const [accountNumber, setAccountNumber] = useState("") // GalaxyPay accountNumber
+  const [branchCode, setBranchCode] = useState("")       // GalaxyPay branchCode
+  const [tcno, setTcno] = useState("")                   // GalaxyPay TC kimlik no
   const [address, setAddress] = useState("")           // Kripto cuzdan
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -104,6 +108,10 @@ export default function WithdrawPage() {
     setBankAccount("")
     setAccountHolder("")
     setBankName("")
+    setBankId("")
+    setAccountNumber("")
+    setBranchCode("")
+    setTcno("")
     setAddress("")
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
@@ -135,6 +143,8 @@ export default function WithdrawPage() {
       if (!bankAccount) { setError("Lütfen IBAN numaranızı girin"); return }
       if (!accountHolder) { setError("Lütfen hesap sahibi adını girin"); return }
       if (!bankName) { setError("Lütfen banka adını girin"); return }
+      if (!accountNumber) { setError("Lütfen hesap numarasını girin"); return }
+      if (!branchCode) { setError("Lütfen şube kodunu girin"); return }
     } else if (selected.id === 'galaxypay-papara') {
       if (!bankAccount) { setError("Lütfen Papara numaranızı girin"); return }
     // MeelDev için özel validasyon
@@ -165,11 +175,16 @@ export default function WithdrawPage() {
           method: 'bank-transfer',
           accountHolder,
           iban: bankAccount,
+          bankId: bankId || undefined,
           bankName,
+          accountNumber: accountNumber || undefined,
+          branchCode: branchCode || undefined,
+          tcno: tcno || undefined,
         })
         if (gpRes.success) {
           setSuccess(gpRes.message || "Çekim talebi oluşturuldu. Admin onayı bekleniyor.")
           setAmount(""); setBankAccount(""); setAccountHolder(""); setBankName("")
+          setBankId(""); setAccountNumber(""); setBranchCode(""); setTcno("")
         } else {
           setError(gpRes.error || "GalaxyPay çekim talebi oluşturulamadı")
         }
@@ -304,6 +319,41 @@ export default function WithdrawPage() {
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   placeholder="Örn: Türkiye İş Bankası A.Ş."
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
+                />
+              </div>
+            </>
+          )}
+          {selected?.id === 'galaxypay-bank' && (
+            <>
+              <div>
+                <label className="text-white text-sm block mb-2">* Hesap Numarası</label>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  placeholder="Hesap numaranız"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">* Şube Kodu</label>
+                <input
+                  type="text"
+                  value={branchCode}
+                  onChange={(e) => setBranchCode(e.target.value)}
+                  placeholder="Örn: 001"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">TC Kimlik No (Opsiyonel)</label>
+                <input
+                  type="text"
+                  value={tcno}
+                  onChange={(e) => setTcno(e.target.value)}
+                  placeholder="11 haneli TC kimlik numaranız"
+                  maxLength={11}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
                 />
               </div>

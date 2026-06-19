@@ -87,10 +87,24 @@ export const galaxypayService = {
 
   // POST /payment/galaxypay/deposit - Zorunlu auth
   // method: "lobby" | "bank-transfer" | "papara"
-  async createDeposit(amount: number, method: string): Promise<GalaxyPayDepositResponse> {
+  // bank-transfer ek alanlar: accountHolder, iban, bankName, accountNumber, branchCode, tcno?
+  // papara ek alanlar: paparaNumber
+  async createDeposit(
+    amount: number,
+    method: string,
+    extra?: {
+      accountHolder?: string
+      iban?: string
+      bankName?: string
+      accountNumber?: string
+      branchCode?: string
+      tcno?: string
+      paparaNumber?: string
+    }
+  ): Promise<GalaxyPayDepositResponse> {
     const response = await apiClient.post<{ success: boolean; message: string; data: GalaxyPayDepositResponse }>(
       '/payment/galaxypay/deposit',
-      { amount, method },
+      { amount, method, ...extra },
       true
     )
     if (response.success && response.data?.data) {
