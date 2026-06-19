@@ -278,11 +278,15 @@ export const gamesService = {
       || d?.data?.launch_url
     if (url) return { success: true, launchUrl: url }
     const msg = d?.msg || d?.message || ''
+    // Backend bakım hatası — doğrudan anlamlı mesajı döndür
+    if (msg === 'GAME_UNAVAILABLE') {
+      return { success: false, error: d?.error || 'Bu oyun şu anda bakımda. Lütfen daha sonra tekrar deneyin.', errorCode: 'GAME_UNAVAILABLE' }
+    }
     const rawDetail = d?.details || d?.error?.error || d?.error || msg || 'Oyun baslatilamadi'
     const rawStr = typeof rawDetail === 'string' ? rawDetail : JSON.stringify(rawDetail)
     // Ham API teknik mesajlarını kullanıcıya gösterme
-    const isTechnical = rawStr.includes('input=') || rawStr.includes('Delay time') || rawStr.includes('timeout=') || rawStr.includes('GetGameUrl')
-    const errDetail = isTechnical ? 'Oyun baslatilamadi' : rawStr
+    const isTechnical = rawStr.includes('input=') || rawStr.includes('Delay time') || rawStr.includes('timeout=') || rawStr.includes('GetGameUrl') || rawStr.includes('is not defined')
+    const errDetail = isTechnical ? 'Oyun şu anda açılamıyor. Lütfen daha sonra tekrar deneyin.' : rawStr
     return { success: false, error: errDetail, errorCode: msg }
   },
 

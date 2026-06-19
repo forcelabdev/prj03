@@ -123,10 +123,16 @@ export async function POST(req: NextRequest) {
       data?.data?.url    ||
       data?.data?.launch_url
 
-    console.log('[v0] game-launch backend status:', response.status, '| launchUrl found:', !!launchUrl, '| data keys:', Object.keys(data || {}), '| raw:', JSON.stringify(data)?.substring(0, 300))
-
     if (!response.ok && launchUrl) {
       return NextResponse.json(data, { status: 200 })
+    }
+
+    // Backend INTERNAL_ERROR (updateMissionProgress gibi backend bug) → kullanıcıya anlamlı mesaj
+    if (data?.msg === 'INTERNAL_ERROR' || data?.error?.includes?.('is not defined')) {
+      return NextResponse.json({
+        msg: 'GAME_UNAVAILABLE',
+        error: 'Bu oyun şu anda bakımda. Lütfen daha sonra tekrar deneyin.',
+      }, { status: 503 })
     }
 
     return NextResponse.json(data, { status: response.ok ? 200 : response.status })
