@@ -4,7 +4,9 @@ const PINNED_GAME_CODES = [
   "heartbreakers",         // Heartbreakers - 1. sıra
   "mrnullswickedwares",   // Mr Null's Wicked Wares - 2. sıra
   "launchtoriches",        // Launch to Riches - 3. sıra
-  "vs20sb2500",            // Sweet Bonanza 2500 - 4. sıra
+  "betterBarnHouseBonanza", // Better Barn House Bonanza - 4. sıra
+  "betterbarnhousebonanza",
+  "vs20sb2500",            // Sweet Bonanza 2500 - 5. sıra
   "vswaysSb2500", 
   "sweetbonanza2500"
 ]
@@ -57,6 +59,14 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
       nameNoSpace.includes("launchtoriches") ||
       (name.includes("launch") && name.includes("riches"))
     
+    const isBetterBarnHouseBonanza =
+      code.includes("betterbarnhousebonanza") ||
+      code.includes("better-barn") ||
+      code.includes("better_barn") ||
+      name.includes("better barn house bonanza") ||
+      name.includes("better barn bonanza") ||
+      (name.includes("better barn") && name.includes("bonanza"))
+
     const isSweetBonanza2500 =
       code.includes("sb2500") ||
       code.includes("sweetbonanza2500") ||
@@ -91,6 +101,19 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
         pinned.splice(mrNullIndex + 1, 0, game)
       } else {
         pinned.unshift(game)
+      }
+    }
+    // 4. Better Barn House Bonanza - Launch to Riches'tan sonra
+    else if (isBetterBarnHouseBonanza) {
+      const launchIndex = pinned.findIndex(g => {
+        const n = (g.name || g.gameName || "").toLowerCase()
+        const c = (g.gameCode || g.code || g.game_code || "").toLowerCase()
+        return n.includes("launch") && n.includes("riches") || c.includes("launchtoriches")
+      })
+      if (launchIndex >= 0) {
+        pinned.splice(launchIndex + 1, 0, game)
+      } else {
+        pinned.push(game)
       }
     } else if (isSweetBonanza2500 || PINNED_GAME_CODES.some(p => code.includes(p))) {
       pinned.push(game)
