@@ -1,13 +1,13 @@
 // Admin'den sabit olarak en üste pinlenen oyun kodları (sıralı)
 // Sıralama: ilk sırada olanlar en üstte görünür
 const PINNED_GAME_CODES = [
-  "heartbreakers",         // Heartbreakers - 1. sıra
-  "mrnullswickedwares",   // Mr Null's Wicked Wares - 2. sıra
-  "launchtoriches",        // Launch to Riches - 3. sıra
-  "betterBarnHouseBonanza", // Better Barn House Bonanza - 4. sıra
-  "betterbarnhousebonanza",
-  "vs20sb2500",            // Sweet Bonanza 2500 - 5. sıra
-  "vswaysSb2500", 
+  "betterbarnhousebonanza", // Better Barn House Bonanza - 1. sıra
+  "betterBarnHouseBonanza",
+  "heartbreakers",          // Heartbreakers - 2. sıra
+  "mrnullswickedwares",    // Mr Null's Wicked Wares - 3. sıra
+  "launchtoriches",         // Launch to Riches - 4. sıra
+  "vs20sb2500",             // Sweet Bonanza 2500 - 5. sıra
+  "vswaysSb2500",
   "sweetbonanza2500"
 ]
 
@@ -75,11 +75,23 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
       name.includes("sweet bonanza xmas 2500")
 
     // Admin'den sabit pinli oyunlar en üste (sırası önemli)
-    // 1. Heartbreakers en başta
-    if (isHeartbreakers) {
-      pinned.unshift(game)  // En başa ekle
-    } 
-    // 2. Mr Null's Wicked Wares - Heartbreakers'dan sonra
+    // 1. Better Barn House Bonanza - en başa
+    if (isBetterBarnHouseBonanza) {
+      pinned.unshift(game)
+    }
+    // 2. Heartbreakers
+    else if (isHeartbreakers) {
+      const barnIndex = pinned.findIndex(g => {
+        const n = (g.name || g.gameName || "").toLowerCase()
+        return n.includes("better barn")
+      })
+      if (barnIndex >= 0) {
+        pinned.splice(barnIndex + 1, 0, game)
+      } else {
+        pinned.unshift(game)
+      }
+    }
+    // 3. Mr Null's Wicked Wares - Heartbreakers'dan sonra
     else if (isMrNullsWickedWares) {
       const heartbreakersIndex = pinned.findIndex(g => {
         const n = (g.name || g.gameName || "").toLowerCase()
@@ -90,8 +102,8 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
       } else {
         pinned.unshift(game)
       }
-    } 
-    // 3. Launch to Riches - Mr Null'dan sonra
+    }
+    // 4. Launch to Riches - Mr Null'dan sonra
     else if (isLaunchToRiches) {
       const mrNullIndex = pinned.findIndex(g => {
         const n = (g.name || g.gameName || "").toLowerCase()
@@ -101,19 +113,6 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
         pinned.splice(mrNullIndex + 1, 0, game)
       } else {
         pinned.unshift(game)
-      }
-    }
-    // 4. Better Barn House Bonanza - Launch to Riches'tan sonra
-    else if (isBetterBarnHouseBonanza) {
-      const launchIndex = pinned.findIndex(g => {
-        const n = (g.name || g.gameName || "").toLowerCase()
-        const c = (g.gameCode || g.code || g.game_code || "").toLowerCase()
-        return n.includes("launch") && n.includes("riches") || c.includes("launchtoriches")
-      })
-      if (launchIndex >= 0) {
-        pinned.splice(launchIndex + 1, 0, game)
-      } else {
-        pinned.push(game)
       }
     } else if (isSweetBonanza2500 || PINNED_GAME_CODES.some(p => code.includes(p))) {
       pinned.push(game)
