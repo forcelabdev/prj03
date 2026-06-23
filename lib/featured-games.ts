@@ -3,10 +3,15 @@
 const PINNED_GAME_CODES = [
   "betterbarnhousebonanza", // Better Barn House Bonanza - 1. sıra
   "betterBarnHouseBonanza",
-  "heartbreakers",          // Heartbreakers - 2. sıra
-  "mrnullswickedwares",    // Mr Null's Wicked Wares - 3. sıra
-  "launchtoriches",         // Launch to Riches - 4. sıra
-  "vs20sb2500",             // Sweet Bonanza 2500 - 5. sıra
+  "sanatoriumsecrets",      // Sanatorium Secrets - 2. sıra
+  "dragonpotsmegaways",     // Dragon Pots Megaways - 3. sıra
+  "mahjongwinstripplepot",  // Mahjong Wins Triple Pot - 4. sıra
+  "mahjongwinstriplepot",
+  "bearcrazy",              // Bear Crazy - 5. sıra
+  "heartbreakers",          // Heartbreakers - 6. sıra
+  "mrnullswickedwares",    // Mr Null's Wicked Wares - 7. sıra
+  "launchtoriches",         // Launch to Riches - 8. sıra
+  "vs20sb2500",             // Sweet Bonanza 2500 - 9. sıra
   "vswaysSb2500",
   "sweetbonanza2500"
 ]
@@ -67,6 +72,30 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
       name.includes("better barn bonanza") ||
       (name.includes("better barn") && name.includes("bonanza"))
 
+    const isSanatoriumSecrets =
+      code.includes("sanatoriumsecrets") ||
+      code.includes("sanatorium-secrets") ||
+      code.includes("sanatorium_secrets") ||
+      name.includes("sanatorium secrets")
+
+    const isDragonPotsMegaways =
+      code.includes("dragonpotsmegaways") ||
+      code.includes("dragon-pots-megaways") ||
+      code.includes("dragon_pots_megaways") ||
+      name.includes("dragon pots megaways")
+
+    const isMahjongWinsTriplePot =
+      code.includes("mahjongwinstriplepot") ||
+      code.includes("mahjongwinstripplepot") ||
+      code.includes("mahjong-wins-triple") ||
+      name.includes("mahjong wins triple pot")
+
+    const isBearCrazy =
+      code.includes("bearcrazy") ||
+      code.includes("bear-crazy") ||
+      code.includes("bear_crazy") ||
+      name.includes("bear crazy")
+
     const isSweetBonanza2500 =
       code.includes("sb2500") ||
       code.includes("sweetbonanza2500") ||
@@ -75,20 +104,46 @@ export const sortGamesByFeatured = (games: any[], categorySlug: string) => {
       name.includes("sweet bonanza xmas 2500")
 
     // Admin'den sabit pinli oyunlar en üste (sırası önemli)
+    // Yardımcı: pinned içinde belirli bir oyunun son index'ini bul
+    const findLastIndex = (keywords: string[]) =>
+      pinned.reduce((last, g, i) => {
+        const n = (g.name || g.gameName || "").toLowerCase()
+        const c = (g.gameCode || g.code || g.game_code || "").toLowerCase()
+        return keywords.some(k => n.includes(k) || c.includes(k)) ? i : last
+      }, -1)
+
     // 1. Better Barn House Bonanza - en başa
     if (isBetterBarnHouseBonanza) {
       pinned.unshift(game)
     }
-    // 2. Heartbreakers
+    // 2. Sanatorium Secrets - Better Barn'dan sonra
+    else if (isSanatoriumSecrets) {
+      const idx = findLastIndex(["better barn"])
+      idx >= 0 ? pinned.splice(idx + 1, 0, game) : pinned.unshift(game)
+    }
+    // 3. Dragon Pots Megaways - Sanatorium'dan sonra
+    else if (isDragonPotsMegaways) {
+      const idx = findLastIndex(["sanatorium"])
+      idx >= 0 ? pinned.splice(idx + 1, 0, game) : pinned.unshift(game)
+    }
+    // 4. Mahjong Wins Triple Pot - Dragon Pots'tan sonra
+    else if (isMahjongWinsTriplePot) {
+      const idx = findLastIndex(["dragon pots", "dragonpots"])
+      idx >= 0 ? pinned.splice(idx + 1, 0, game) : pinned.unshift(game)
+    }
+    // 5. Bear Crazy - Mahjong'dan sonra
+    else if (isBearCrazy) {
+      const idx = findLastIndex(["mahjong wins triple", "mahjongwins"])
+      idx >= 0 ? pinned.splice(idx + 1, 0, game) : pinned.unshift(game)
+    }
+    // 6. Heartbreakers - Bear Crazy'den sonra
     else if (isHeartbreakers) {
-      const barnIndex = pinned.findIndex(g => {
-        const n = (g.name || g.gameName || "").toLowerCase()
-        return n.includes("better barn")
-      })
-      if (barnIndex >= 0) {
-        pinned.splice(barnIndex + 1, 0, game)
+      const idx = findLastIndex(["bear crazy", "bearcrazy"])
+      if (idx >= 0) {
+        pinned.splice(idx + 1, 0, game)
       } else {
-        pinned.unshift(game)
+        const barnIndex = pinned.findIndex(g => (g.name || g.gameName || "").toLowerCase().includes("better barn"))
+        barnIndex >= 0 ? pinned.splice(barnIndex + 1, 0, game) : pinned.unshift(game)
       }
     }
     // 3. Mr Null's Wicked Wares - Heartbreakers'dan sonra

@@ -208,20 +208,22 @@ function CasinoCategorySection({
   const providers = Array.from(new Set(category.games.map((g) => g.provider || g.provider_code).filter(Boolean) as string[])).sort()
   const toggleProvider = (p: string) => setSelectedProviders((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])
 
-  // Provider filterlemesi yap (sıralama lobi'den zaten gelir)
+  // Provider filterlemesi yap — sıralama filteredCategories useMemo'da zaten yapıldı
   let filteredGames = selectedProviders.length === 0
     ? category.games
     : category.games.filter((g) => selectedProviders.includes(g.provider || g.provider_code || ""))
-  
-  // Oyunlara has_lobby ve featured field'lerini ekle (API'den gelmiş olabilir veya olmayabilir)
-  const gamesWithDefaults = sortGamesByFeatured(
-    filteredGames.map(game => ({
-      ...game,
-      has_lobby: game.has_lobby ?? 0,
-      featured: game.featured ?? 0
-    })),
-    category.slug || category.name
-  )
+
+  // Filtre uygulandığında da pinleme sırasını koru
+  const gamesWithDefaults = selectedProviders.length === 0
+    ? filteredGames
+    : sortGamesByFeatured(
+        filteredGames.map(game => ({
+          ...game,
+          has_lobby: game.has_lobby ?? 0,
+          featured: game.featured ?? 0
+        })),
+        category.slug || category.name
+      )
 
   const mobileVisibleGames = showAll ? gamesWithDefaults : gamesWithDefaults.slice(0, visibleCount)
   // desktopLimit: showAll ise tamami, degil ise 6 cols * 2 satir = 12 (xl'de 8*2=16)
@@ -649,10 +651,17 @@ export default function CasinoPage({ initialCategory = undefined }: { initialCat
       ? categories
       : categories.filter((cat) => cat.name === activeTab)
     
-    // Her kategorinin oyunlarını sırala
+    // Her kategorinin oyunlarını sırala — pinleme burada tek seferlik yapılır
     return filtered.map((cat) => ({
       ...cat,
-      games: sortGamesByFeatured(cat.games, toSlug(cat.name))
+      games: sortGamesByFeatured(
+        cat.games.map(g => ({
+          ...g,
+          has_lobby: g.has_lobby ?? 0,
+          featured: g.featured ?? 0
+        })),
+        toSlug(cat.name)
+      )
     }))
   }, [activeTab, categories])
 
