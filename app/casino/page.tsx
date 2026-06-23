@@ -560,7 +560,15 @@ export default function CasinoPage({ initialCategory = undefined }: { initialCat
             }
           }
 
-          setCategories(nonEmpty)
+          // Pinleme siralamasi veri set edilirken de uygula — filteredCategories useMemo ile senkronize
+          const sortedNonEmpty = nonEmpty.map((cat) => ({
+            ...cat,
+            games: sortGamesByFeatured(
+              cat.games.map(g => ({ ...g, has_lobby: g.has_lobby ?? 0, featured: g.featured ?? 0 })),
+              (cat.slug || cat.name || "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+            )
+          }))
+          setCategories(sortedNonEmpty)
           setCategoryTabs(["Lobi", ...nonEmpty.map((c) => c.name)])
           const initialCounts: Record<string, number> = {}
           nonEmpty.forEach((cat) => { initialCounts[cat.id] = 4 })
@@ -606,7 +614,10 @@ export default function CasinoPage({ initialCategory = undefined }: { initialCat
         games = res2.success && res2.games && res2.games.length > 0 ? res2.games : null
       }
       if (games) {
-        const allGames = games.map((g: any, i: number) => transformGame(g, i))
+        const allGames = sortGamesByFeatured(
+          games.map((g: any, i: number) => transformGame(g, i)).map(g => ({ ...g, has_lobby: g.has_lobby ?? 0, featured: g.featured ?? 0 })),
+          slug
+        )
         setCategories((prev) =>
           prev.map((c) => c.name === activeTab ? { ...c, games: allGames } : c)
         )
