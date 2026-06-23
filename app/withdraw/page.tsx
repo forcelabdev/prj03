@@ -45,9 +45,14 @@ export default function WithdrawPage() {
 
   const [amount, setAmount] = useState("")
   const [bankAccount, setBankAccount] = useState("")   // IBAN veya hesap no
-  const [accountHolder, setAccountHolder] = useState("") // Hesap sahibi (MeelDev)
-  const [bankName, setBankName] = useState("")           // Banka adı (MeelDev)
+  const [accountHolder, setAccountHolder] = useState("") // Hesap sahibi (MeelDev / GalaxyPay)
+  const [bankName, setBankName] = useState("")           // Banka adı (MeelDev / GalaxyPay)
+  const [bankId, setBankId] = useState("")               // GalaxyPay bankId
+  const [accountNumber, setAccountNumber] = useState("") // GalaxyPay accountNumber
+  const [branchCode, setBranchCode] = useState("")       // GalaxyPay branchCode
+  const [tcno, setTcno] = useState("")                   // GalaxyPay TC kimlik no
   const [address, setAddress] = useState("")           // Kripto cuzdan
+  const [galaxypayBanks, setGalaxypayBanks] = useState<{ id: number; name: string }[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -62,6 +67,15 @@ export default function WithdrawPage() {
     check()
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
+  }, [])
+
+  // GalaxyPay banka listesini cek
+  useEffect(() => {
+    galaxypayService.getMethods().then((res) => {
+      if (res.success && res.data?.banks?.length) {
+        setGalaxypayBanks(res.data.banks)
+      }
+    }).catch(() => {})
   }, [])
 
   // Pending çekim talebi kontrolü
@@ -104,6 +118,10 @@ export default function WithdrawPage() {
     setBankAccount("")
     setAccountHolder("")
     setBankName("")
+    setBankId("")
+    setAccountNumber("")
+    setBranchCode("")
+    setTcno("")
     setAddress("")
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
@@ -134,7 +152,10 @@ export default function WithdrawPage() {
     if (selected.id === 'galaxypay-bank') {
       if (!bankAccount) { setError("Lütfen IBAN numaranızı girin"); return }
       if (!accountHolder) { setError("Lütfen hesap sahibi adını girin"); return }
-      if (!bankName) { setError("Lütfen banka adını girin"); return }
+      if (!bankId) { setError("Lütfen banka seçin"); return }
+      if (!accountNumber) { setError("Lütfen hesap numarasını girin"); return }
+      if (!branchCode) { setError("Lütfen şube kodunu girin"); return }
+      if (!tcno) { setError("TC kimlik numarası zorunludur"); return }
     } else if (selected.id === 'galaxypay-papara') {
       if (!bankAccount) { setError("Lütfen Papara numaranızı girin"); return }
     // MeelDev için özel validasyon
@@ -165,11 +186,16 @@ export default function WithdrawPage() {
           method: 'bank-transfer',
           accountHolder,
           iban: bankAccount,
+          bankId: bankId || undefined,
           bankName,
+          accountNumber: accountNumber || undefined,
+          branchCode: branchCode || undefined,
+          tcno: tcno || undefined,
         })
         if (gpRes.success) {
           setSuccess(gpRes.message || "Çekim talebi oluşturuldu. Admin onayı bekleniyor.")
           setAmount(""); setBankAccount(""); setAccountHolder(""); setBankName("")
+          setBankId(""); setAccountNumber(""); setBranchCode(""); setTcno("")
         } else {
           setError(gpRes.error || "GalaxyPay çekim talebi oluşturulamadı")
         }
@@ -285,27 +311,52 @@ export default function WithdrawPage() {
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3 font-mono tracking-wider"
             />
           </div>
-          {(selected?.id === 'meeldev' || selected?.id === 'galaxypay-bank') && (
+          {selected?.id === 'meeldev' && (
             <>
               <div>
                 <label className="text-white text-sm block mb-2">* Hesap Sahibi</label>
-                <input
-                  type="text"
-                  value={accountHolder}
-                  onChange={(e) => setAccountHolder(e.target.value)}
-                  placeholder="Ad Soyad"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
-                />
+                <input type="text" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Ad Soyad" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
               </div>
               <div>
                 <label className="text-white text-sm block mb-2">* Banka Adı</label>
-                <input
-                  type="text"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="Örn: Türkiye İş Bankası A.Ş."
+                <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Örn: Türkiye İş Bankası A.Ş." className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
+              </div>
+            </>
+          )}
+          {selected?.id === 'galaxypay-bank' && (
+            <>
+              <div>
+                <label className="text-white text-sm block mb-2">* Hesap Sahibi</label>
+                <input type="text" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Ad Soyad" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">* Banka</label>
+                <select
+                  value={bankId}
+                  onChange={(e) => {
+                    const sel = galaxypayBanks.find(b => String(b.id) === e.target.value)
+                    setBankId(e.target.value)
+                    setBankName(sel?.name || "")
+                  }}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3"
-                />
+                >
+                  <option value="">Banka seçin...</option>
+                  {galaxypayBanks.map(b => (
+                    <option key={b.id} value={String(b.id)}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">* Hesap Numarası</label>
+                <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">* Şube Kodu</label>
+                <input type="text" value={branchCode} onChange={(e) => setBranchCode(e.target.value)} placeholder="Örn: 001" className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
+              </div>
+              <div>
+                <label className="text-white text-sm block mb-2">* TC Kimlik No</label>
+                <input type="text" value={tcno} onChange={(e) => setTcno(e.target.value)} placeholder="11 haneli TC kimlik numaranız" maxLength={11} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white px-4 py-3" />
               </div>
             </>
           )}

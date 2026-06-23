@@ -29,6 +29,8 @@ export default function DepositPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [depositAmount, setDepositAmount] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
+  // GalaxyPay deposit sub-method: 'lobby' | 'bank-transfer' | 'papara'
+  const [galaxypayMethod, setGalaxypayMethod] = useState<'lobby' | 'bank-transfer' | 'papara'>('lobby')
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -218,7 +220,8 @@ export default function DepositPage() {
 
   const handleSelectMethod = (id: string) => {
     setSelectedMethod(id)
-    setDepositAmount("") // Yeni metod secilince tutari sifirla
+    setDepositAmount("")
+    setGalaxypayMethod('lobby')
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
 
@@ -307,16 +310,21 @@ export default function DepositPage() {
     try {
       const returnUrl = `${window.location.origin}/deposit`
 
-      // GalaxyPay - Lobby yontemine yonlendir
+      // GalaxyPay - backend sadece { amount, method } bekliyor, diger alanlar profil'den alinir
       if (selected.id === 'galaxypay') {
-        const gpRes = await galaxypayService.createDeposit(amount, 'lobby')
-        if (gpRes.success && gpRes.paymentUrl) {
-          window.location.href = gpRes.paymentUrl
-        } else if (gpRes.success) {
-          alert('GalaxyPay işleminiz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
-        } else {
-          alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+        try {
+          const gpRes = await galaxypayService.createDeposit(amount, galaxypayMethod)
+          if (gpRes.success && gpRes.paymentUrl) {
+            window.location.href = gpRes.paymentUrl
+          } else if (gpRes.success) {
+            alert('GalaxyPay yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+          } else {
+            alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+          }
+        } catch (e: any) {
+          alert('GalaxyPay işlemi başlatılırken hata oluştu: ' + (e?.message || e))
         }
+        setIsProcessing(false)
         return
       }
 
@@ -425,7 +433,25 @@ export default function DepositPage() {
             </div>
           </div>
           
-          {/* Tutar input - mpay-havale, jetbak ve kripto icin */}
+          {/* GalaxyPay - Alt yöntem seçimi */}
+          {selected?.id === 'galaxypay' && (
+            <div className="mb-5">
+              <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setGalaxypayMethod(m)}
+                    className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
+                  >
+                    {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tutar input - mpay-havale, jetbak, meeldev, galaxypay için */}
           {needsAmountInput && (
             <div className="mb-6">
               <label className="text-white text-sm mb-2 block">* Tutar</label>
@@ -457,6 +483,16 @@ export default function DepositPage() {
                   Minimum yatırım tutarı ₺100,00 olmalıdır.
                 </p>
               )}
+            </div>
+          )}
+
+          {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
+
+          {/* GalaxyPay Papara ek alanı */}
+          {selected?.id === 'galaxypay' && galaxypayMethod === 'papara' && (
+            <div className="mb-5">
+              <label className="text-white text-sm block mb-1">* Papara Numarası</label>
+              <input type="text" value={gpPaparaNumber} onChange={(e) => setGpPaparaNumber(e.target.value)} placeholder="Papara hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
             </div>
           )}
           
@@ -574,7 +610,25 @@ export default function DepositPage() {
                   </div>
                 </div>
 
-                {/* Tutar input - mpay-havale, jetbak ve kripto icin */}
+                {/* GalaxyPay - Alt yöntem seçimi (desktop) */}
+                {selected?.id === 'galaxypay' && (
+                  <div className="mb-5">
+                    <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setGalaxypayMethod(m)}
+                          className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
+                        >
+                          {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tutar input - mpay-havale, jetbak, meeldev, galaxypay için (desktop) */}
                 {needsAmountInput && (
                   <div className="mb-6">
                     <label className="text-white text-sm mb-2 block">* Tutar</label>
@@ -584,10 +638,11 @@ export default function DepositPage() {
                         type="number"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
-                        placeholder={selected?.id === 'meeldev' ? 'Min: 1.000 ₺' : '0,00'}
-                        min={selected?.id === 'meeldev' ? 1000 : 1}
+                        placeholder={selected?.id === 'meeldev' ? 'Min: 1.000 ₺' : selected?.id === 'galaxypay' ? 'Min: 100 ₺' : '0,00'}
+                        min={selected?.id === 'meeldev' ? 1000 : selected?.id === 'galaxypay' ? 100 : 1}
                         className={`w-full bg-zinc-800 border rounded-xl py-4 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none transition-colors ${
-                          selected?.id === 'meeldev' && depositAmount && parseFloat(depositAmount) < 1000
+                          ((selected?.id === 'meeldev' && depositAmount && parseFloat(depositAmount) < 1000) ||
+                           (selected?.id === 'galaxypay' && depositAmount && parseFloat(depositAmount) < 100))
                             ? 'border-red-500 focus:border-red-500'
                             : 'border-zinc-700 focus:border-[#00d4b4]'
                         }`}
@@ -599,8 +654,16 @@ export default function DepositPage() {
                         Minimum yatırım tutarı ₺1.000,00 olmalıdır.
                       </p>
                     )}
+                    {selected?.id === 'galaxypay' && depositAmount && parseFloat(depositAmount) < 100 && (
+                      <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                        Minimum yatırım tutarı ₺100,00 olmalıdır.
+                      </p>
+                    )}
                   </div>
                 )}
+
+                {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
 
                 <button onClick={handleDeposit} disabled={isProcessing} className="w-full py-4 bg-[#00d4b4] text-black font-bold rounded-xl flex items-center justify-center gap-2 text-base disabled:opacity-60 disabled:cursor-not-allowed">
                   {isProcessing ? (
