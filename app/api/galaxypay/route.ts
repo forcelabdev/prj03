@@ -55,15 +55,13 @@ const ENDPOINTS: Record<string, string> = {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    // Auth token'dan kullanıcı bilgilerini al (fallback: body'den gelen değerler)
+    // Auth token'dan kullanıcı bilgilerini backend'den çek
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.replace('Bearer ', '').trim()
 
     const {
       type,        // "deposit" | "withdraw"
       method,      // "bank-transfer" | "lobby" | "papara"
-      userId,
-      username,
       amount,
       // withdraw için ek alanlar
       iban,
@@ -77,8 +75,38 @@ export async function POST(req: NextRequest) {
     if (!API_ID || !API_KEY) {
       return NextResponse.json({ success: false, error: 'GalaxyPay API kimlik bilgileri eksik (GALAXYPAY_API_ID / GALAXYPAY_API_KEY).' }, { status: 500 })
     }
-    if (!userId || !username || !amount || !type || !method) {
-      return NextResponse.json({ success: false, error: 'Eksik parametre: userId, username, amount, type, method zorunludur.' }, { status: 400 })
+    if (!amount || !type || !method) {
+      return NextResponse.json({ success: false, error: 'Eksik parametre: amount, type, method zorunludur.' }, { status: 400 })
+    }
+
+    // Kullanıcı bilgilerini backend'den al
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://apievrymatrix5d84k321.com'
+    const AGENT_TOKEN = process.env.NEXT_PUBLIC_AGENT_TOKEN || ''
+    let userId = body.userId || ''
+    let username = body.username || ''
+
+    if (token && (!userId || !username)) {
+      try {
+        const meRes = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            ...(AGENT_TOKEN ? { 'x-agent-token': AGENT_TOKEN } : {}),
+          },
+        })
+        if (meRes.ok) {
+          const meData = await meRes.json()
+          const u = meData?.data ?? meData?.user ?? meData
+          userId = userId || u?.identifier || u?._id || u?.id || ''
+          username = username || u?.username || u?.name || u?.email || ''
+        }
+      } catch {
+        // sessizce devam et
+      }
+    }
+
+    if (!userId || !username) {
+      return NextResponse.json({ success: false, error: 'Kullanici bilgileri alinamadi. Lutfen tekrar giris yapin.' }, { status: 401 })
     }
 
     const endpointKey = `${type}:${method}`
