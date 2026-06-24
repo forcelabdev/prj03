@@ -33,6 +33,7 @@ export default function DepositPage() {
   const [galaxypayMethod] = useState<'bank-transfer'>('bank-transfer')
   const [galaxypayBankInfo, setGalaxypayBankInfo] = useState<GalaxyPayBankInfo | null>(null)
   const [meeldevIframeUrl, setMeeldevIframeUrl] = useState<string | null>(null)
+  const [galaxypayIframeUrl, setGalaxypayIframeUrl] = useState<string | null>(null)
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -340,7 +341,7 @@ export default function DepositPage() {
         try {
           const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
           if (gpRes.success && gpRes.paymentUrl) {
-            window.location.href = gpRes.paymentUrl
+            setGalaxypayIframeUrl(gpRes.paymentUrl)
           } else if (gpRes.success) {
             setGalaxypayBankInfo(gpRes.bankInfo || gpRes.data || null)
           } else {
@@ -585,6 +586,43 @@ export default function DepositPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+
+      {/* GalaxyPay iframe modal */}
+      {galaxypayIframeUrl && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-lg mx-4 bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ height: '85vh' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-semibold text-sm">GalaxyPay</span>
+                <span className="text-xs text-gray-400">— Banka Transferi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={galaxypayIframeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                  title="Yeni sekmede aç"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+                <button
+                  onClick={() => setGalaxypayIframeUrl(null)}
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={galaxypayIframeUrl}
+              className="flex-1 w-full border-0"
+              allow="payment"
+              title="GalaxyPay Banka Transferi"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Capora Havale (MeelDev) iframe modal */}
       {meeldevIframeUrl && (
