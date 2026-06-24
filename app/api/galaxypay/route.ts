@@ -53,10 +53,6 @@ export async function POST(req: NextRequest) {
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
 
-    if (data?.ip_address) {
-      console.log("[v0] GalaxyPay sunucu IP:", data.ip_address)
-    }
-
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
       data?.data?.paymentUrl || data?.data?.payment_url || data?.data?.url ||
@@ -81,6 +77,7 @@ export async function POST(req: NextRequest) {
       data: data?.data || null,
       error: success ? null : error,
       message: data?.message || null,
+      ip_address: data?.ip_address || null,
     }, { status: response.ok ? 200 : response.status })
 
   } catch (err: unknown) {

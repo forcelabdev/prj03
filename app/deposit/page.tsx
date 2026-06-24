@@ -345,7 +345,8 @@ export default function DepositPage() {
           } else if (gpRes.success) {
             setGalaxypayBankInfo(gpRes.bankInfo || gpRes.data || null)
           } else {
-            alert('HATA: ' + (gpRes.error || gpRes.message || 'GalaxyPay yatırım başlatılamadı'))
+            const ipInfo = gpRes.ip_address ? `\n\nGalaxyPay'e istek atan IP: ${gpRes.ip_address}\n(Bu IP'yi GalaxyPay paneline ekleyin)` : ''
+            alert('HATA: ' + (gpRes.error || gpRes.message || 'GalaxyPay yatırım başlatılamadı') + ipInfo)
           }
         } catch (e: any) {
           alert('GalaxyPay işlemi başlatılırken hata oluştu: ' + (e?.message || e))
