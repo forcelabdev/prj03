@@ -155,16 +155,29 @@ export async function POST(req: NextRequest) {
     try { data = JSON.parse(text) }
     catch { data = { raw: text } }
 
-    // paymentUrl çeşitli field adlarında gelebilir
-    const paymentUrl =
+    // paymentUrl çeşitli field adlarında gelebilir — relative URL'leri normalize et
+    const rawUrl =
       data?.payment_url || data?.paymentUrl || data?.url ||
-      data?.redirect_url || data?.redirectUrl || data?.data?.url ||
-      data?.data?.payment_url
+      data?.redirect_url || data?.redirectUrl ||
+      data?.data?.url || data?.data?.payment_url ||
+      data?.data?.redirect_url
+
+    const normalizeUrl = (url: string | undefined): string | null => {
+      if (!url) return null
+      if (url.startsWith('//')) return `https:${url}`
+      if (url.startsWith('/')) return `${GALAXYPAY_BASE}${url}`
+      return url
+    }
+
+    const paymentUrl = normalizeUrl(rawUrl)
+
+    console.log("[v0] GalaxyPay raw response:", JSON.stringify(data))
+    console.log("[v0] GalaxyPay paymentUrl:", paymentUrl)
 
     return NextResponse.json({
       success: response.ok,
       data,
-      paymentUrl: paymentUrl || null,
+      paymentUrl,
       externalTransactionId,
     }, { status: response.ok ? 200 : response.status })
 

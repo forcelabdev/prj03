@@ -125,6 +125,7 @@ export const galaxypayService = {
         body: JSON.stringify({ type: 'deposit', method, amount }),
       })
       const d = await res.json()
+      console.log("[v0] GalaxyPay full response:", JSON.stringify(d))
       // Banka bilgilerini çeşitli field adlarından parse et
       const raw = d.data || d
       const bankInfo: GalaxyPayBankInfo = {
