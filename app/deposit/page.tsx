@@ -29,8 +29,8 @@ export default function DepositPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [depositAmount, setDepositAmount] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
-  // GalaxyPay deposit sub-method: 'lobby' | 'bank-transfer' | 'papara'
-  const [galaxypayMethod, setGalaxypayMethod] = useState<'lobby' | 'bank-transfer' | 'papara'>('lobby')
+  // GalaxyPay deposit sub-method: sadece bank-transfer aktif
+  const [galaxypayMethod] = useState<'bank-transfer'>('bank-transfer')
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -221,7 +221,6 @@ export default function DepositPage() {
   const handleSelectMethod = (id: string) => {
     setSelectedMethod(id)
     setDepositAmount("")
-    setGalaxypayMethod('lobby')
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
 
@@ -310,16 +309,16 @@ export default function DepositPage() {
     try {
       const returnUrl = `${window.location.origin}/deposit`
 
-      // GalaxyPay - backend sadece { amount, method } bekliyor, diger alanlar profil'den alinir
+      // GalaxyPay Banka Transferi - backend { amount, method: "bank-transfer" } bekliyor
       if (selected.id === 'galaxypay') {
         try {
-          const gpRes = await galaxypayService.createDeposit(amount, galaxypayMethod)
+          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
           if (gpRes.success && gpRes.paymentUrl) {
             window.location.href = gpRes.paymentUrl
           } else if (gpRes.success) {
-            alert('GalaxyPay yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            alert('GalaxyPay banka transferi talebiniz oluşturuldu. Havaleyi gerçekleştirdikten sonra işlem geçmişinizden takip edebilirsiniz.')
           } else {
-            alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+            alert('HATA: ' + (gpRes.error || gpRes.message || 'GalaxyPay yatırım başlatılamadı'))
           }
         } catch (e: any) {
           alert('GalaxyPay işlemi başlatılırken hata oluştu: ' + (e?.message || e))
@@ -433,20 +432,12 @@ export default function DepositPage() {
             </div>
           </div>
           
-          {/* GalaxyPay - Alt yöntem seçimi */}
+          {/* GalaxyPay - Banka Transferi (sabit method) */}
           {selected?.id === 'galaxypay' && (
             <div className="mb-5">
-              <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setGalaxypayMethod(m)}
-                    className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
-                  >
-                    {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
+                <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
+                <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
               </div>
             </div>
           )}
@@ -486,15 +477,7 @@ export default function DepositPage() {
             </div>
           )}
 
-          {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
-
-          {/* GalaxyPay Papara ek alanı */}
-          {selected?.id === 'galaxypay' && galaxypayMethod === 'papara' && (
-            <div className="mb-5">
-              <label className="text-white text-sm block mb-1">* Papara Numarası</label>
-              <input type="text" value={gpPaparaNumber} onChange={(e) => setGpPaparaNumber(e.target.value)} placeholder="Papara hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-            </div>
-          )}
+          {/* GalaxyPay banka transferi - ek alan gerekmez, backend profil'den alıyor */}
           
           <button onClick={handleDeposit} disabled={isProcessing} className="w-full py-4 bg-[#00d4b4] text-black font-bold rounded-xl flex items-center justify-center gap-2 text-base disabled:opacity-60 disabled:cursor-not-allowed">
             {isProcessing ? (
@@ -610,20 +593,12 @@ export default function DepositPage() {
                   </div>
                 </div>
 
-                {/* GalaxyPay - Alt yöntem seçimi (desktop) */}
+                {/* GalaxyPay - Banka Transferi (sabit method, desktop) */}
                 {selected?.id === 'galaxypay' && (
                   <div className="mb-5">
-                    <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => setGalaxypayMethod(m)}
-                          className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
-                        >
-                          {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
+                      <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
+                      <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
                     </div>
                   </div>
                 )}
