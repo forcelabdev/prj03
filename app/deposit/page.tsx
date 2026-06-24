@@ -712,8 +712,8 @@ export default function DepositPage() {
                           <img
                             src={method.icon}
                             alt={method.name}
-                            style={method.id === 'galaxypay' ? { width: "70px", height: "28px" } : {}}
-                            className={method.id === 'galaxypay' ? "object-contain" : "h-full w-auto object-contain"}
+                            style={method.icon?.includes('galaxypay') ? { width: "70px", height: "28px" } : {}}
+                            className={method.icon?.includes('galaxypay') ? "object-contain" : "h-full w-auto object-contain"}
                           />
                         ) : (
                           <span className="text-[#00d4b4] font-extrabold leading-none text-[10px]">{method.logo}</span>
