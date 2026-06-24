@@ -326,7 +326,7 @@ export default function DepositPage() {
     setShowConfirmModal(false)
     const amount = needsAmountInput ? parseFloat(depositAmount) : 0
     if (needsAmountInput && (!amount || amount <= 0)) {
-      alert('Lütfen geçerli bir tutar girin.')
+      alert('Lütfen ge��erli bir tutar girin.')
       return
     }
     if (selected.id === 'galaxypay' && needsAmountInput && amount < 100) {
@@ -711,9 +711,9 @@ export default function DepositPage() {
                     >
                       <div className="w-full flex items-center justify-start mb-2" style={{ height: "28px" }}>
                         {(method as any).isGalaxyPay ? (
-                          <div className="flex flex-col leading-none">
-                            <span className="text-white font-bold" style={{ fontSize: "11px" }}>GalaxyPay</span>
-                            <span className="text-gray-400 font-semibold" style={{ fontSize: "9px" }}>HAVALE</span>
+                          <div className="flex flex-col leading-none gap-0.5">
+                            <span className="text-white font-bold" style={{ fontSize: "15px" }}>GalaxyPay</span>
+                            <span className="text-gray-400 font-semibold" style={{ fontSize: "11px" }}>HAVALE</span>
                           </div>
                         ) : method.icon ? (
                           <img src={method.icon} alt={method.name} className="h-full w-auto object-contain" />
