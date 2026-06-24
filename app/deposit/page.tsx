@@ -134,8 +134,12 @@ export default function DepositPage() {
           
           // MeelDev için Capora Havale logosunu kullan
           iconsMap['meeldev'] = '/images/capora-havale.png';
-          // GalaxyPay logo
+          // GalaxyPay logo — çeşitli id formatlarını karşıla
           iconsMap['galaxypay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy-pay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy_pay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxypay-havale'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy-pay-havale'] = '/images/galaxypay-logo.png';
 
           // Gizlenecek yöntemler - ID ve name'e göre check et
           const excludeIds = ['papara', 'payfix', 'jetbank-transfer', 'banka-havalesi', 'mpay-fast-havale', 'mpay-fast', 'trust-para', 'trustpara', 'bank-transfer', 'banka']
@@ -156,8 +160,8 @@ export default function DepositPage() {
             })
             .map(method => {
               // Icon URL'sini ekle
-              const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-')
-              const icon = iconsMap[iconKey]
+              const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-')
+              const icon = iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined
               
               // Sadece bu yöntemi favori olarak işaretle
               const favoriteIds = ['usdt-trc20', 'btc', 'eth', 'trx', 'usdt-erc20', 'galaxypay', 'meeldev', 'super-havale', 'mpay-havale', 'hizli-odeme-havale', 'maxi-havale']
