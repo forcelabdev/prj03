@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
     let requestBody: Record<string, unknown>
 
     if (type === 'deposit') {
-      // POST /payment/galaxypay/deposit — { amount, method }
+      // POST /payment/galaxypay/deposit — sadece { amount }, method backend tarafından biliniyor
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = { amount, method }
+      requestBody = { amount }
     } else {
       // POST /payment/galaxypay/withdraw — { amount, method, ...banka alanlari }
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
