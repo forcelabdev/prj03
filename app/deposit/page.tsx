@@ -341,7 +341,7 @@ export default function DepositPage() {
         try {
           const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
           if (gpRes.success && gpRes.paymentUrl) {
-            setGalaxypayIframeUrl(gpRes.paymentUrl)
+            window.open(gpRes.paymentUrl, '_blank', 'noopener,noreferrer')
           } else if (gpRes.success) {
             setGalaxypayBankInfo(gpRes.bankInfo || gpRes.data || null)
           } else {
