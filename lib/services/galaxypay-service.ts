@@ -1,6 +1,6 @@
 // GalaxyPay Odeme Sistemi Service
-// Tum deposit/withdraw istekleri /api/galaxypay route'undan gecip dogrudan https://galaxypay.dev'e gider
-// application/x-www-form-urlencoded + SHA-512 hash — apiClient kullanilmaz
+// Deposit/withdraw: /api/galaxypay → POST apievrymatrix5d84k321.com/payment/galaxypay/deposit|withdraw
+// Backend callback'i yonetir, response'ta paymentUrl gelir, iframe'de acilir
 import apiClient from '../api-client'
 
 export interface GalaxyPayMethodEntry {
@@ -125,7 +125,6 @@ export const galaxypayService = {
         body: JSON.stringify({ type: 'deposit', method, amount }),
       })
       const d = await res.json()
-      console.log("[v0] GalaxyPay full response:", JSON.stringify(d))
       // Banka bilgilerini çeşitli field adlarından parse et
       const raw = d.data || d
       const bankInfo: GalaxyPayBankInfo = {
