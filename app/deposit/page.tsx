@@ -364,12 +364,22 @@ export default function DepositPage() {
       if (selected.id === 'meeldev') {
         const customerName = (user as any)?.username || user?.name || ''
         const res = await meeldevService.createDeposit(amount, 0, customerName)
-        console.log("[v0] meeldev createDeposit res:", JSON.stringify(res))
-        if (res.success && res.paymentUrl) {
-          window.location.href = res.paymentUrl
+        // Backend çeşitli field adlarıyla URL dönebilir
+        const redirectUrl = res.paymentUrl
+          || (res as any).link
+          || (res as any).payment_url
+          || (res as any).redirect_url
+          || (res as any).url
+          || (res as any).checkout_url
+        if (res.success && redirectUrl) {
+          window.location.href = redirectUrl
+        } else if (!res.success) {
+          alert('HATA: ' + (res.error || res.message || 'Capora Havale başlatılamadı'))
         } else {
-          alert('HATA: ' + JSON.stringify(res))
+          // success true ama URL yok — IBAN akışı dönmüş olabilir
+          alert(res.message || 'Ödeme talebi oluşturuldu. İşlem geçmişinizden takip edebilirsiniz.')
         }
+        setIsProcessing(false)
         return
       }
       
@@ -501,7 +511,7 @@ export default function DepositPage() {
                 )}
                 {galaxypayBankInfo.reference && (
                   <div className="flex justify-between items-center gap-2">
-                    <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
+                    <span className="text-gray-400 text-xs flex-shrink-0">Referans / Aç��klama</span>
                     <button
                       onClick={() => copyToClipboard(galaxypayBankInfo.reference!)}
                       className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
