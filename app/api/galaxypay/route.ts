@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
       if (tcno)          requestBody.tcno           = tcno
     }
 
+    console.log("=== GALAXYPAY REQUEST ===")
+    console.log("ENDPOINT:", endpoint)
+    console.log("HEADERS:", JSON.stringify({ ...commonHeaders, Authorization: commonHeaders.Authorization ? 'Bearer [REDACTED]' : undefined }))
+    console.log("BODY:", JSON.stringify(requestBody))
+    console.log("========================")
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: commonHeaders,
@@ -58,7 +64,11 @@ export async function POST(req: NextRequest) {
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
 
-    console.log("[v0] GalaxyPay backend status:", response.status, "data:", JSON.stringify(data))
+    console.log("=== GALAXYPAY RESPONSE ===")
+    console.log("STATUS:", response.status)
+    console.log("HEADERS:", JSON.stringify(Object.fromEntries(response.headers.entries())))
+    console.log("BODY:", JSON.stringify(data))
+    console.log("==========================")
 
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
