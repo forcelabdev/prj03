@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
 
+    console.log("[v0] GalaxyPay RAW:", text)
+
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
       data?.data?.paymentUrl || data?.data?.payment_url || data?.data?.url ||
