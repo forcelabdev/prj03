@@ -47,12 +47,36 @@ export default function DepositPage() {
   }
   const cryptoInfo = selected ? cryptoWallets[selected.id] : null
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+  const copyToClipboard = (text: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        }).catch(() => fallbackCopy(text))
+      } else {
+        fallbackCopy(text)
+      }
+    } catch {
+      fallbackCopy(text)
+    }
   }
+
+  const fallbackCopy = (text: string) => {
+    const el = document.createElement('textarea')
+    el.value = text
+    el.style.position = 'fixed'
+    el.style.opacity = '0'
+    document.body.appendChild(el)
+    el.focus()
+    el.select()
+    try { document.execCommand('copy') } catch { }
+    document.body.removeChild(el)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleCopy = (text: string) => copyToClipboard(text)
 
   useEffect(() => {
     const fetchMethods = async () => {
@@ -467,7 +491,7 @@ export default function DepositPage() {
                   <div className="flex justify-between items-start gap-2">
                     <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
                     <button
-                      onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.iban!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                      onClick={() => copyToClipboard(galaxypayBankInfo.iban!)}
                       className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
                     >
                       {galaxypayBankInfo.iban}
@@ -479,7 +503,7 @@ export default function DepositPage() {
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
                     <button
-                      onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.reference!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                      onClick={() => copyToClipboard(galaxypayBankInfo.reference!)}
                       className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
                     >
                       {galaxypayBankInfo.reference}
@@ -678,7 +702,7 @@ export default function DepositPage() {
                         <div className="flex justify-between items-start gap-2">
                           <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
                           <button
-                            onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.iban!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                            onClick={() => copyToClipboard(galaxypayBankInfo.iban!)}
                             className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
                           >
                             {galaxypayBankInfo.iban}
@@ -690,7 +714,7 @@ export default function DepositPage() {
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
                           <button
-                            onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.reference!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                            onClick={() => copyToClipboard(galaxypayBankInfo.reference!)}
                             className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
                           >
                             {galaxypayBankInfo.reference}
