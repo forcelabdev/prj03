@@ -30,6 +30,16 @@ export interface GalaxyPayMethods {
   banks: GalaxyPayBank[]
 }
 
+export interface GalaxyPayBankInfo {
+  bankName?: string
+  iban?: string
+  accountHolder?: string
+  accountNumber?: string
+  branchCode?: string
+  reference?: string
+  description?: string
+}
+
 export interface GalaxyPayDepositResponse {
   success: boolean
   transactionId?: string
@@ -40,6 +50,8 @@ export interface GalaxyPayDepositResponse {
   amount?: number
   currency?: string
   paymentUrl?: string
+  bankInfo?: GalaxyPayBankInfo
+  data?: any
   error?: string
   message?: string
 }
@@ -113,9 +125,22 @@ export const galaxypayService = {
         body: JSON.stringify({ type: 'deposit', method, amount }),
       })
       const d = await res.json()
-      if (d.paymentUrl) return { success: true, paymentUrl: d.paymentUrl, externalTransactionId: d.externalTransactionId }
-      if (d.success)    return { success: true, externalTransactionId: d.externalTransactionId, message: d.data?.message }
-      return { success: false, error: d.error || d.data?.message || 'GalaxyPay yatirim baslatılamadi' }
+      // Banka bilgilerini çeşitli field adlarından parse et
+      const raw = d.data || d
+      const bankInfo: GalaxyPayBankInfo = {
+        bankName:      raw?.bank_name      || raw?.bankName      || raw?.bank          || undefined,
+        iban:          raw?.iban           || raw?.IBAN           || undefined,
+        accountHolder: raw?.account_holder || raw?.accountHolder || raw?.name          || undefined,
+        accountNumber: raw?.account_number || raw?.accountNumber || undefined,
+        branchCode:    raw?.branch_code    || raw?.branchCode    || undefined,
+        reference:     raw?.reference      || raw?.ref           || raw?.external_transaction_id || d.externalTransactionId || undefined,
+        description:   raw?.description    || raw?.note          || raw?.message       || undefined,
+      }
+      const hasBankInfo = Object.values(bankInfo).some(v => !!v)
+
+      if (d.paymentUrl) return { success: true, paymentUrl: d.paymentUrl, externalTransactionId: d.externalTransactionId, bankInfo: hasBankInfo ? bankInfo : undefined, data: raw }
+      if (d.success)    return { success: true, externalTransactionId: d.externalTransactionId, message: raw?.message, bankInfo: hasBankInfo ? bankInfo : undefined, data: raw }
+      return { success: false, error: d.error || raw?.message || 'GalaxyPay yatirim baslatılamadi', data: raw }
     } catch (e: any) {
       return { success: false, error: e?.message || 'GalaxyPay baglanti hatasi' }
     }

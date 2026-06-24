@@ -14,7 +14,7 @@ import { UnauthorizedPage } from "@/components/unauthorized-page"
 import { tokenManager } from "@/lib/token-manager"
 import { paymentService, type DepositMethod } from "@/lib/services/payment-service"
 import { meeldevService } from "@/lib/services/meeldev-service"
-import { galaxypayService } from "@/lib/services/galaxypay-service"
+import { galaxypayService, type GalaxyPayBankInfo } from "@/lib/services/galaxypay-service"
 import { DepositConfirmModal } from "@/components/deposit-confirm-modal"
 
 export default function DepositPage() {
@@ -31,6 +31,7 @@ export default function DepositPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   // GalaxyPay deposit sub-method: sadece bank-transfer aktif
   const [galaxypayMethod] = useState<'bank-transfer'>('bank-transfer')
+  const [galaxypayBankInfo, setGalaxypayBankInfo] = useState<GalaxyPayBankInfo | null>(null)
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -316,7 +317,7 @@ export default function DepositPage() {
           if (gpRes.success && gpRes.paymentUrl) {
             window.location.href = gpRes.paymentUrl
           } else if (gpRes.success) {
-            alert('GalaxyPay banka transferi talebiniz oluşturuldu. Havaleyi gerçekleştirdikten sonra işlem geçmişinizden takip edebilirsiniz.')
+            setGalaxypayBankInfo(gpRes.bankInfo || gpRes.data || null)
           } else {
             alert('HATA: ' + (gpRes.error || gpRes.message || 'GalaxyPay yatırım başlatılamadı'))
           }
@@ -438,6 +439,56 @@ export default function DepositPage() {
               <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
                 <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
                 <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
+              </div>
+            </div>
+          )}
+
+          {/* GalaxyPay - Havale yapılacak hesap bilgileri */}
+          {selected?.id === 'galaxypay' && galaxypayBankInfo && (
+            <div className="mb-6 rounded-xl border border-[#00d4b4]/40 bg-[#00d4b4]/5 overflow-hidden">
+              <div className="bg-[#00d4b4]/20 px-4 py-2.5 flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#00d4b4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="text-[#00d4b4] text-sm font-semibold">Havale Bilgileri</span>
+              </div>
+              <div className="p-4 space-y-3">
+                {galaxypayBankInfo.bankName && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-xs">Banka</span>
+                    <span className="text-white text-sm font-medium">{galaxypayBankInfo.bankName}</span>
+                  </div>
+                )}
+                {galaxypayBankInfo.accountHolder && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-xs">Hesap Sahibi</span>
+                    <span className="text-white text-sm font-medium">{galaxypayBankInfo.accountHolder}</span>
+                  </div>
+                )}
+                {galaxypayBankInfo.iban && (
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.iban!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                      className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      {galaxypayBankInfo.iban}
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                  </div>
+                )}
+                {galaxypayBankInfo.reference && (
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.reference!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                      className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      {galaxypayBankInfo.reference}
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                  </div>
+                )}
+                {copied && <p className="text-[#00d4b4] text-xs text-center">Kopyalandı!</p>}
+                <p className="text-gray-400 text-xs mt-2 pt-2 border-t border-zinc-700">Havaleyi yukarıdaki hesaba yaptıktan sonra işlem geçmişinizden takip edebilirsiniz.</p>
               </div>
             </div>
           )}
@@ -599,6 +650,56 @@ export default function DepositPage() {
                     <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
                       <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
                       <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* GalaxyPay - Havale yapılacak hesap bilgileri (desktop) */}
+                {selected?.id === 'galaxypay' && galaxypayBankInfo && (
+                  <div className="mb-6 rounded-xl border border-[#00d4b4]/40 bg-[#00d4b4]/5 overflow-hidden">
+                    <div className="bg-[#00d4b4]/20 px-4 py-2.5 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-[#00d4b4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-[#00d4b4] text-sm font-semibold">Havale Bilgileri</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {galaxypayBankInfo.bankName && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 text-xs">Banka</span>
+                          <span className="text-white text-sm font-medium">{galaxypayBankInfo.bankName}</span>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.accountHolder && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 text-xs">Hesap Sahibi</span>
+                          <span className="text-white text-sm font-medium">{galaxypayBankInfo.accountHolder}</span>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.iban && (
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.iban!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                            className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
+                          >
+                            {galaxypayBankInfo.iban}
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.reference && (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(galaxypayBankInfo.reference!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                            className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
+                          >
+                            {galaxypayBankInfo.reference}
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      )}
+                      {copied && <p className="text-[#00d4b4] text-xs text-center">Kopyalandı!</p>}
+                      <p className="text-gray-400 text-xs mt-2 pt-2 border-t border-zinc-700">Havaleyi yukarıdaki hesaba yaptıktan sonra işlem geçmişinizden takip edebilirsiniz.</p>
                     </div>
                   </div>
                 )}
