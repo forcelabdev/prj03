@@ -1,8 +1,6 @@
 // GalaxyPay Odeme Sistemi Service
-// Backend: POST /payment/deposit/bank-transfer  → { amount }  (method path'te, backend profil'den user bilgilerini alir)
-// Backend: POST /payment/withdraw/bank-transfer → { amount, iban, accountHolder, bankId, accountNumber, branchCode, tcno }
-// Backend: GET  /payment/galaxypay/methods      → banka listesi dahil method bilgileri
-// Backend: GET  /payment/galaxypay/status/:id
+// Tum deposit/withdraw istekleri /api/galaxypay route'undan gecip dogrudan https://galaxypay.dev'e gider
+// application/x-www-form-urlencoded + SHA-512 hash — apiClient kullanilmaz
 import apiClient from '../api-client'
 
 export interface GalaxyPayMethodEntry {
@@ -101,48 +99,68 @@ export const galaxypayService = {
     return { success: false, error: response.error || 'GalaxyPay yontem bilgisi alinamadi' }
   },
 
-  // POST /payment/deposit/{method} — method path'e giriyor, body sadece { amount }
-  async createDeposit(amount: number, method: string): Promise<GalaxyPayDepositResponse> {
-    const response = await apiClient.post<any>(
-      `/payment/deposit/${method}`,
-      { amount },
-      true
-    )
-    return parseResponse<GalaxyPayDepositResponse>(response)
+  // POST https://galaxypay.dev/payment/deposit/{method}
+  // /api/galaxypay route'u uzerinden — SHA-512 hash imzali, form-urlencoded
+  async createDeposit(amount: number, method: string = 'bank-transfer'): Promise<GalaxyPayDepositResponse> {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+      const res = await fetch('/api/galaxypay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ type: 'deposit', method, amount }),
+      })
+      const d = await res.json()
+      if (d.paymentUrl) return { success: true, paymentUrl: d.paymentUrl, externalTransactionId: d.externalTransactionId }
+      if (d.success)    return { success: true, externalTransactionId: d.externalTransactionId, message: d.data?.message }
+      return { success: false, error: d.error || d.data?.message || 'GalaxyPay yatirim baslatılamadi' }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'GalaxyPay baglanti hatasi' }
+    }
   },
 
-  // POST /payment/galaxypay/withdraw
-  // bank-transfer: iban, accountHolder, bankId (zorunlu), accountNumber (zorunlu), branchCode (zorunlu), tcno (zorunlu)
-  // papara: accountNumber (paparaNumber), accountHolder?
+  // POST https://galaxypay.dev/payment/draw/bank-transfer
+  // /api/galaxypay route'u uzerinden — SHA-512 hash imzali, form-urlencoded
   async createWithdraw(data: {
     amount: number
-    method: 'bank-transfer' | 'papara'
-    // bank-transfer alanlari
+    method?: 'bank-transfer' | 'papara'
     iban?: string
     accountHolder?: string
-    bankId?: string
+    bankId?: string | number
     bankName?: string
     accountNumber?: string
     branchCode?: string
     tcno?: string
-    // papara alanlari
     paparaNumber?: string
   }): Promise<GalaxyPayWithdrawResponse> {
-    // Backend papara icin accountNumber bekliyor, paparaNumber alias'ini normalize et
-    const body: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(data)) {
-      if (v !== undefined && v !== null && v !== '') {
-        if (k === 'paparaNumber') {
-          body['accountNumber'] = v // papara icin backend accountNumber bekliyor
-        } else {
-          body[k] = v
-        }
-      }
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+      const res = await fetch('/api/galaxypay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          type: 'withdraw',
+          method: data.method || 'bank-transfer',
+          amount: data.amount,
+          iban: data.iban,
+          accountHolder: data.accountHolder,
+          bankId: data.bankId,
+          accountNumber: data.accountNumber || data.paparaNumber,
+          branchCode: data.branchCode,
+          tcno: data.tcno,
+        }),
+      })
+      const d = await res.json()
+      if (d.success) return { success: true, externalTransactionId: d.externalTransactionId, message: d.data?.message }
+      return { success: false, error: d.error || d.data?.message || 'GalaxyPay cekim baslatılamadi' }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'GalaxyPay baglanti hatasi' }
     }
-    // Backend: POST /payment/withdraw/{method} — method path'e giriyor
-    const withdrawMethod = (data.method as string) || 'bank-transfer'
-    const response = await apiClient.post<any>(`/payment/withdraw/${withdrawMethod}`, body, true)
-    return parseResponse<GalaxyPayWithdrawResponse>(response)
   },
 
   // GET /payment/galaxypay/status/:id
