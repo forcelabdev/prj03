@@ -161,7 +161,8 @@ export default function DepositPage() {
             .map(method => {
               // Icon URL'sini ekle
               const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-')
-              const icon = iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined
+              const isGalaxyPay = iconKey.includes('galaxy') || (method.id || '').toLowerCase().includes('galaxy')
+              const icon = isGalaxyPay ? '/images/galaxypay-logo.png' : (iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined)
               
               // Sadece bu yöntemi favori olarak işaretle
               const favoriteIds = ['usdt-trc20', 'btc', 'eth', 'trx', 'usdt-erc20', 'galaxypay', 'meeldev', 'super-havale', 'mpay-havale', 'hizli-odeme-havale', 'maxi-havale']
@@ -194,7 +195,8 @@ export default function DepositPage() {
                 min: minOverride,
                 max: maxOverride,
                 icon: icon || undefined,
-                favorite: isFavorite
+                favorite: isFavorite,
+                isGalaxyPay
               }
             })
             .sort((a, b) => {
@@ -712,8 +714,8 @@ export default function DepositPage() {
                           <img
                             src={method.icon}
                             alt={method.name}
-                            style={method.icon?.includes('galaxypay') ? { width: "70px", height: "28px" } : {}}
-                            className={method.icon?.includes('galaxypay') ? "object-contain" : "h-full w-auto object-contain"}
+                            style={(method as any).isGalaxyPay ? { width: "70px", height: "28px" } : {}}
+                            className={(method as any).isGalaxyPay ? "object-contain" : "h-full w-auto object-contain"}
                           />
                         ) : (
                           <span className="text-[#00d4b4] font-extrabold leading-none text-[10px]">{method.logo}</span>
