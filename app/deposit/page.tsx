@@ -161,7 +161,8 @@ export default function DepositPage() {
             .map(method => {
               // Icon URL'sini ekle
               const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-')
-              const isGalaxyPay = iconKey.includes('galaxy') || (method.id || '').toLowerCase().includes('galaxy')
+              console.log("[v0] method id:", method.id, "name:", method.name, "image:", (method as any).image)
+              const isGalaxyPay = iconKey.includes('galaxy') || (method.id || '').toLowerCase().includes('galaxy') || (method.name || '').toLowerCase().includes('galaxy')
               const icon = isGalaxyPay ? '/images/galaxypay-logo.png' : (iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined)
               
               // Sadece bu yöntemi favori olarak işaretle
