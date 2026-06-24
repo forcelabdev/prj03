@@ -1,7 +1,7 @@
 // GalaxyPay Odeme Sistemi Service
-// Backend: POST /payment/galaxypay/deposit  → { amount, method }  (backend profil'den ek alanlari alir)
-// Backend: POST /payment/galaxypay/withdraw → bank-transfer icin { amount, method, iban, accountHolder, bankId, accountNumber, branchCode, tcno }
-// Backend: GET  /payment/galaxypay/methods  → banka listesi dahil method bilgileri
+// Backend: POST /payment/deposit/bank-transfer  → { amount }  (method path'te, backend profil'den user bilgilerini alir)
+// Backend: POST /payment/withdraw/bank-transfer → { amount, iban, accountHolder, bankId, accountNumber, branchCode, tcno }
+// Backend: GET  /payment/galaxypay/methods      → banka listesi dahil method bilgileri
 // Backend: GET  /payment/galaxypay/status/:id
 import apiClient from '../api-client'
 
@@ -101,12 +101,11 @@ export const galaxypayService = {
     return { success: false, error: response.error || 'GalaxyPay yontem bilgisi alinamadi' }
   },
 
-  // POST /payment/galaxypay/deposit — body: { amount, method }
-  // method: "lobby" | "bank-transfer" | "papara"
+  // POST /payment/deposit/{method} — method path'e giriyor, body sadece { amount }
   async createDeposit(amount: number, method: string): Promise<GalaxyPayDepositResponse> {
     const response = await apiClient.post<any>(
-      '/payment/galaxypay/deposit',
-      { amount, method },
+      `/payment/deposit/${method}`,
+      { amount },
       true
     )
     return parseResponse<GalaxyPayDepositResponse>(response)
@@ -140,8 +139,9 @@ export const galaxypayService = {
         }
       }
     }
-    // Backend: POST /payment/galaxypay/withdraw — body icinde method var
-    const response = await apiClient.post<any>('/payment/galaxypay/withdraw', body, true)
+    // Backend: POST /payment/withdraw/{method} — method path'e giriyor
+    const withdrawMethod = (data.method as string) || 'bank-transfer'
+    const response = await apiClient.post<any>(`/payment/withdraw/${withdrawMethod}`, body, true)
     return parseResponse<GalaxyPayWithdrawResponse>(response)
   },
 
