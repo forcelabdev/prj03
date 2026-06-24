@@ -11,11 +11,15 @@ export async function POST(req: NextRequest) {
 
     const { type, method, amount, iban, accountHolder, bankId, accountNumber, branchCode, tcno } = body
 
+    console.log("[v0] GalaxyPay route body:", JSON.stringify({ type, method, amount, hasToken: !!token }))
+
     if (!token) {
       return NextResponse.json({ success: false, error: 'Giris yapmaniz gerekiyor.' }, { status: 401 })
     }
-    if (!amount || !type || !method) {
-      return NextResponse.json({ success: false, error: 'Eksik parametre: amount, type, method zorunludur.' }, { status: 400 })
+    const parsedAmount = Number(amount)
+    if (!type || !method || isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.log("[v0] GalaxyPay 400 reason:", { type, method, amount, parsedAmount })
+      return NextResponse.json({ success: false, error: `Eksik parametre: type=${type}, method=${method}, amount=${amount}` }, { status: 400 })
     }
 
     const commonHeaders: Record<string, string> = {
@@ -31,11 +35,11 @@ export async function POST(req: NextRequest) {
       // POST /payment/galaxypay/deposit — backend body'deki method ile getGalaxyPayEndpoint() çağırır
       // method zorunlu: "lobby" | "bank-transfer" | "papara"
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = { amount, method }
+      requestBody = { amount: parsedAmount, method }
     } else {
       // POST /payment/galaxypay/withdraw — { amount, method, ...banka alanlari }
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
-      requestBody = { amount, method }
+      requestBody = { amount: parsedAmount, method }
       if (iban)          requestBody.iban           = iban
       if (accountHolder) requestBody.accountHolder  = accountHolder
       if (bankId)        requestBody.bankId         = bankId
@@ -53,6 +57,8 @@ export async function POST(req: NextRequest) {
     const text = await response.text()
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
+
+    console.log("[v0] GalaxyPay backend status:", response.status, "data:", JSON.stringify(data))
 
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
