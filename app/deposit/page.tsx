@@ -707,9 +707,9 @@ export default function DepositPage() {
                       className={`flex flex-col text-left rounded-lg p-2 transition-all hover:brightness-110 ${selectedMethod === method.id ? "outline outline-1 outline-yellow-500" : ""}`}
                       style={{ background: "linear-gradient(140deg, rgb(85 85 85) 5%, rgb(37 37 37) 40%, rgb(0, 0, 0) 60%)", boxShadow: "rgba(255, 255, 255, 0.2) 0px 0px 0px 1px inset" }}
                     >
-                      <div className="w-full flex items-center justify-start mb-2" style={{ height: "28px" }}>
+                      <div className="w-full flex items-center justify-start mb-2" style={{ height: "48px" }}>
                         {method.icon ? (
-                          <img src={method.icon} alt={method.name} className="h-full w-auto object-contain" />
+                          <img src={method.icon} alt={method.name} className="h-full w-auto max-w-full object-contain" />
                         ) : (
                           <span className="text-[#00d4b4] font-extrabold leading-none text-[10px]">{method.logo}</span>
                         )}
