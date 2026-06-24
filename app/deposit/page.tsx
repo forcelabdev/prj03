@@ -161,7 +161,6 @@ export default function DepositPage() {
             .map(method => {
               // Icon URL'sini ekle
               const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-')
-              console.log("[v0] method id:", method.id, "name:", method.name, "image:", (method as any).image)
               const isGalaxyPay = iconKey.includes('galaxy') || (method.id || '').toLowerCase().includes('galaxy') || (method.name || '').toLowerCase().includes('galaxy')
               const icon = isGalaxyPay ? '/images/galaxypay-logo.png' : (iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined)
               
@@ -711,13 +710,13 @@ export default function DepositPage() {
                       style={{ background: "linear-gradient(140deg, rgb(85 85 85) 5%, rgb(37 37 37) 40%, rgb(0, 0, 0) 60%)", boxShadow: "rgba(255, 255, 255, 0.2) 0px 0px 0px 1px inset" }}
                     >
                       <div className="w-full flex items-center justify-start mb-2" style={{ height: "28px" }}>
-                        {method.icon ? (
-                          <img
-                            src={method.icon}
-                            alt={method.name}
-                            style={(method as any).isGalaxyPay ? { width: "70px", height: "28px" } : {}}
-                            className={(method as any).isGalaxyPay ? "object-contain" : "h-full w-auto object-contain"}
-                          />
+                        {(method as any).isGalaxyPay ? (
+                          <div className="flex flex-col leading-none">
+                            <span className="text-white font-bold" style={{ fontSize: "11px" }}>GalaxyPay</span>
+                            <span className="text-gray-400 font-semibold" style={{ fontSize: "9px" }}>HAVALE</span>
+                          </div>
+                        ) : method.icon ? (
+                          <img src={method.icon} alt={method.name} className="h-full w-auto object-contain" />
                         ) : (
                           <span className="text-[#00d4b4] font-extrabold leading-none text-[10px]">{method.logo}</span>
                         )}
