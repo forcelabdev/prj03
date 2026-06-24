@@ -135,7 +135,7 @@ export default function DepositPage() {
           // MeelDev için Capora Havale logosunu kullan
           iconsMap['meeldev'] = '/images/capora-havale.png';
           // GalaxyPay logo
-          iconsMap['galaxypay'] = '/images/galaxypay.png';
+          iconsMap['galaxypay'] = '/images/galaxypay-logo.png';
 
           // Gizlenecek yöntemler - ID ve name'e göre check et
           const excludeIds = ['papara', 'payfix', 'jetbank-transfer', 'banka-havalesi', 'mpay-fast-havale', 'mpay-fast', 'trust-para', 'trustpara', 'bank-transfer', 'banka']
