@@ -65,9 +65,12 @@ export const meeldevService = {
   async createDeposit(amount: number, directAccount: 0 | 1, customerName?: string): Promise<MeelDevDepositResponse> {
     const payload: Record<string, unknown> = { amount, directAccount }
     if (customerName) payload.customerName = customerName
-    const response = await apiClient.post<MeelDevDepositResponse>('/payment/meeldev/deposit', payload, true)
+    const response = await apiClient.post<any>('/payment/meeldev/deposit', payload, true)
     if (response.success && response.data) {
-      return { success: true, ...response.data }
+      const d = response.data
+      // Backend çeşitli field adlarıyla URL dönebilir — normalize et
+      const paymentUrl = d.paymentUrl || d.link || d.payment_url || d.redirect_url || d.url || d.checkout_url || undefined
+      return { success: true, ...d, paymentUrl }
     }
     return { success: false, error: response.error || response.data?.error || 'Yatırım talebi oluşturulamadı' }
   },

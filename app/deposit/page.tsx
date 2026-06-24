@@ -14,7 +14,7 @@ import { UnauthorizedPage } from "@/components/unauthorized-page"
 import { tokenManager } from "@/lib/token-manager"
 import { paymentService, type DepositMethod } from "@/lib/services/payment-service"
 import { meeldevService } from "@/lib/services/meeldev-service"
-import { galaxypayService } from "@/lib/services/galaxypay-service"
+import { galaxypayService, type GalaxyPayBankInfo } from "@/lib/services/galaxypay-service"
 import { DepositConfirmModal } from "@/components/deposit-confirm-modal"
 
 export default function DepositPage() {
@@ -29,8 +29,11 @@ export default function DepositPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [depositAmount, setDepositAmount] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
-  // GalaxyPay deposit sub-method: 'lobby' | 'bank-transfer' | 'papara'
-  const [galaxypayMethod, setGalaxypayMethod] = useState<'lobby' | 'bank-transfer' | 'papara'>('lobby')
+  // GalaxyPay deposit sub-method: sadece bank-transfer aktif
+  const [galaxypayMethod] = useState<'bank-transfer'>('bank-transfer')
+  const [galaxypayBankInfo, setGalaxypayBankInfo] = useState<GalaxyPayBankInfo | null>(null)
+  const [meeldevIframeUrl, setMeeldevIframeUrl] = useState<string | null>(null)
+  const [galaxypayIframeUrl, setGalaxypayIframeUrl] = useState<string | null>(null)
 
   const selected = selectedMethod ? depositMethods.find(m => m.id === selectedMethod) : null
   const needsAmountInput = selected?.id === 'mpay-havale' || selected?.id === 'jetbak-transfer' || selected?.id === 'meeldev' || selected?.id === 'galaxypay'
@@ -46,12 +49,36 @@ export default function DepositPage() {
   }
   const cryptoInfo = selected ? cryptoWallets[selected.id] : null
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+  const copyToClipboard = (text: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        }).catch(() => fallbackCopy(text))
+      } else {
+        fallbackCopy(text)
+      }
+    } catch {
+      fallbackCopy(text)
+    }
   }
+
+  const fallbackCopy = (text: string) => {
+    const el = document.createElement('textarea')
+    el.value = text
+    el.style.position = 'fixed'
+    el.style.opacity = '0'
+    document.body.appendChild(el)
+    el.focus()
+    el.select()
+    try { document.execCommand('copy') } catch { }
+    document.body.removeChild(el)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleCopy = (text: string) => copyToClipboard(text)
 
   useEffect(() => {
     const fetchMethods = async () => {
@@ -221,7 +248,6 @@ export default function DepositPage() {
   const handleSelectMethod = (id: string) => {
     setSelectedMethod(id)
     setDepositAmount("")
-    setGalaxypayMethod('lobby')
     if (window.innerWidth < 1024) setIsMobileView(true)
   }
 
@@ -310,16 +336,16 @@ export default function DepositPage() {
     try {
       const returnUrl = `${window.location.origin}/deposit`
 
-      // GalaxyPay - backend sadece { amount, method } bekliyor, diger alanlar profil'den alinir
+      // GalaxyPay Banka Transferi - backend { amount, method: "bank-transfer" } bekliyor
       if (selected.id === 'galaxypay') {
         try {
-          const gpRes = await galaxypayService.createDeposit(amount, galaxypayMethod)
+          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
           if (gpRes.success && gpRes.paymentUrl) {
-            window.location.href = gpRes.paymentUrl
+            setGalaxypayIframeUrl(gpRes.paymentUrl)
           } else if (gpRes.success) {
-            alert('GalaxyPay yatırım talebiniz oluşturuldu. Durum için işlem geçmişinizi kontrol edin.')
+            setGalaxypayBankInfo(gpRes.bankInfo || gpRes.data || null)
           } else {
-            alert('HATA: ' + (gpRes.error || 'GalaxyPay yatırım başlatılamadı'))
+            alert('HATA: ' + (gpRes.error || gpRes.message || 'GalaxyPay yatırım başlatılamadı'))
           }
         } catch (e: any) {
           alert('GalaxyPay işlemi başlatılırken hata oluştu: ' + (e?.message || e))
@@ -340,12 +366,22 @@ export default function DepositPage() {
       if (selected.id === 'meeldev') {
         const customerName = (user as any)?.username || user?.name || ''
         const res = await meeldevService.createDeposit(amount, 0, customerName)
-        console.log("[v0] meeldev createDeposit res:", JSON.stringify(res))
-        if (res.success && res.paymentUrl) {
-          window.location.href = res.paymentUrl
+        // Backend çeşitli field adlarıyla URL dönebilir
+        const redirectUrl = res.paymentUrl
+          || (res as any).link
+          || (res as any).payment_url
+          || (res as any).redirect_url
+          || (res as any).url
+          || (res as any).checkout_url
+        if (res.success && redirectUrl) {
+          setMeeldevIframeUrl(redirectUrl)
+        } else if (!res.success) {
+          alert('HATA: ' + (res.error || res.message || 'Capora Havale başlatılamadı'))
         } else {
-          alert('HATA: ' + JSON.stringify(res))
+          // success true ama URL yok — IBAN akışı dönmüş olabilir
+          alert(res.message || 'Ödeme talebi oluşturuldu. İşlem geçmişinizden takip edebilirsiniz.')
         }
+        setIsProcessing(false)
         return
       }
       
@@ -433,20 +469,62 @@ export default function DepositPage() {
             </div>
           </div>
           
-          {/* GalaxyPay - Alt yöntem seçimi */}
+          {/* GalaxyPay - Banka Transferi (sabit method) */}
           {selected?.id === 'galaxypay' && (
             <div className="mb-5">
-              <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setGalaxypayMethod(m)}
-                    className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
-                  >
-                    {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
+                <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
+                <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
+              </div>
+            </div>
+          )}
+
+          {/* GalaxyPay - Havale yapılacak hesap bilgileri */}
+          {selected?.id === 'galaxypay' && galaxypayBankInfo && (
+            <div className="mb-6 rounded-xl border border-[#00d4b4]/40 bg-[#00d4b4]/5 overflow-hidden">
+              <div className="bg-[#00d4b4]/20 px-4 py-2.5 flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#00d4b4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="text-[#00d4b4] text-sm font-semibold">Havale Bilgileri</span>
+              </div>
+              <div className="p-4 space-y-3">
+                {galaxypayBankInfo.bankName && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-xs">Banka</span>
+                    <span className="text-white text-sm font-medium">{galaxypayBankInfo.bankName}</span>
+                  </div>
+                )}
+                {galaxypayBankInfo.accountHolder && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-xs">Hesap Sahibi</span>
+                    <span className="text-white text-sm font-medium">{galaxypayBankInfo.accountHolder}</span>
+                  </div>
+                )}
+                {galaxypayBankInfo.iban && (
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
+                    <button
+                      onClick={() => copyToClipboard(galaxypayBankInfo.iban!)}
+                      className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      {galaxypayBankInfo.iban}
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                  </div>
+                )}
+                {galaxypayBankInfo.reference && (
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-gray-400 text-xs flex-shrink-0">Referans / Aç��klama</span>
+                    <button
+                      onClick={() => copyToClipboard(galaxypayBankInfo.reference!)}
+                      className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      {galaxypayBankInfo.reference}
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                  </div>
+                )}
+                {copied && <p className="text-[#00d4b4] text-xs text-center">Kopyalandı!</p>}
+                <p className="text-gray-400 text-xs mt-2 pt-2 border-t border-zinc-700">Havaleyi yukarıdaki hesaba yaptıktan sonra işlem geçmişinizden takip edebilirsiniz.</p>
               </div>
             </div>
           )}
@@ -486,15 +564,7 @@ export default function DepositPage() {
             </div>
           )}
 
-          {/* GalaxyPay bank-transfer ve papara icin ek alan gerekmez — backend profil'den aliyor */}
-
-          {/* GalaxyPay Papara ek alanı */}
-          {selected?.id === 'galaxypay' && galaxypayMethod === 'papara' && (
-            <div className="mb-5">
-              <label className="text-white text-sm block mb-1">* Papara Numarası</label>
-              <input type="text" value={gpPaparaNumber} onChange={(e) => setGpPaparaNumber(e.target.value)} placeholder="Papara hesap numaranız" className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white text-sm" />
-            </div>
-          )}
+          {/* GalaxyPay banka transferi - ek alan gerekmez, backend profil'den alıyor */}
           
           <button onClick={handleDeposit} disabled={isProcessing} className="w-full py-4 bg-[#00d4b4] text-black font-bold rounded-xl flex items-center justify-center gap-2 text-base disabled:opacity-60 disabled:cursor-not-allowed">
             {isProcessing ? (
@@ -516,6 +586,81 @@ export default function DepositPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+
+      {/* GalaxyPay iframe modal */}
+      {galaxypayIframeUrl && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-lg mx-4 bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ height: '85vh' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-semibold text-sm">GalaxyPay</span>
+                <span className="text-xs text-gray-400">— Banka Transferi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={galaxypayIframeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                  title="Yeni sekmede aç"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+                <button
+                  onClick={() => setGalaxypayIframeUrl(null)}
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={galaxypayIframeUrl}
+              className="flex-1 w-full border-0"
+              allow="payment"
+              title="GalaxyPay Banka Transferi"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Capora Havale (MeelDev) iframe modal */}
+      {meeldevIframeUrl && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-lg mx-4 bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ height: '85vh' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-semibold text-sm">Capora Havale</span>
+                <span className="text-xs text-gray-400">— Ödeme sayfası</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={meeldevIframeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                  title="Yeni sekmede aç"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+                <button
+                  onClick={() => setMeeldevIframeUrl(null)}
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={meeldevIframeUrl}
+              className="flex-1 w-full border-0"
+              allow="payment"
+              title="Capora Havale Ödeme"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="lg:hidden"><Header onMenuClick={() => setShowSidebar(true)} onLoginClick={() => setShowLogin(true)} /></div>
       <div className="hidden lg:block"><DesktopHeader onLoginClick={() => setShowLogin(true)} /></div>
 
@@ -610,20 +755,62 @@ export default function DepositPage() {
                   </div>
                 </div>
 
-                {/* GalaxyPay - Alt yöntem seçimi (desktop) */}
+                {/* GalaxyPay - Banka Transferi (sabit method, desktop) */}
                 {selected?.id === 'galaxypay' && (
                   <div className="mb-5">
-                    <label className="text-white text-sm mb-2 block">* Ödeme Yöntemi</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['lobby', 'bank-transfer', 'papara'] as const).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => setGalaxypayMethod(m)}
-                          className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${galaxypayMethod === m ? 'border-[#00d4b4] bg-[#00d4b4]/10 text-[#00d4b4]' : 'border-zinc-700 text-gray-400 hover:border-zinc-500'}`}
-                        >
-                          {m === 'lobby' ? 'Lobby' : m === 'bank-transfer' ? 'Banka Havalesi' : 'Papara'}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-2 rounded-lg border border-[#00d4b4] bg-[#00d4b4]/10 px-4 py-2.5">
+                      <svg className="w-4 h-4 text-[#00d4b4] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 10h18M5 14h3m4 0h3m-6 4h6" /></svg>
+                      <span className="text-[#00d4b4] text-sm font-medium">Banka Havalesi</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* GalaxyPay - Havale yapılacak hesap bilgileri (desktop) */}
+                {selected?.id === 'galaxypay' && galaxypayBankInfo && (
+                  <div className="mb-6 rounded-xl border border-[#00d4b4]/40 bg-[#00d4b4]/5 overflow-hidden">
+                    <div className="bg-[#00d4b4]/20 px-4 py-2.5 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-[#00d4b4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-[#00d4b4] text-sm font-semibold">Havale Bilgileri</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {galaxypayBankInfo.bankName && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 text-xs">Banka</span>
+                          <span className="text-white text-sm font-medium">{galaxypayBankInfo.bankName}</span>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.accountHolder && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 text-xs">Hesap Sahibi</span>
+                          <span className="text-white text-sm font-medium">{galaxypayBankInfo.accountHolder}</span>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.iban && (
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-gray-400 text-xs flex-shrink-0 mt-0.5">IBAN</span>
+                          <button
+                            onClick={() => copyToClipboard(galaxypayBankInfo.iban!)}
+                            className="text-[#00d4b4] text-sm font-mono text-right hover:text-white transition-colors flex items-center gap-1"
+                          >
+                            {galaxypayBankInfo.iban}
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      )}
+                      {galaxypayBankInfo.reference && (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-400 text-xs flex-shrink-0">Referans / Açıklama</span>
+                          <button
+                            onClick={() => copyToClipboard(galaxypayBankInfo.reference!)}
+                            className="text-yellow-400 text-sm font-mono hover:text-white transition-colors flex items-center gap-1"
+                          >
+                            {galaxypayBankInfo.reference}
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      )}
+                      {copied && <p className="text-[#00d4b4] text-xs text-center">Kopyalandı!</p>}
+                      <p className="text-gray-400 text-xs mt-2 pt-2 border-t border-zinc-700">Havaleyi yukarıdaki hesaba yaptıktan sonra işlem geçmişinizden takip edebilirsiniz.</p>
                     </div>
                   </div>
                 )}
