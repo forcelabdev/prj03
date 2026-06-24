@@ -134,8 +134,12 @@ export default function DepositPage() {
           
           // MeelDev için Capora Havale logosunu kullan
           iconsMap['meeldev'] = '/images/capora-havale.png';
-          // GalaxyPay logo
-          iconsMap['galaxypay'] = '/images/galaxypay.png';
+          // GalaxyPay logo — çeşitli id formatlarını karşıla
+          iconsMap['galaxypay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy-pay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy_pay'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxypay-havale'] = '/images/galaxypay-logo.png';
+          iconsMap['galaxy-pay-havale'] = '/images/galaxypay-logo.png';
 
           // Gizlenecek yöntemler - ID ve name'e göre check et
           const excludeIds = ['papara', 'payfix', 'jetbank-transfer', 'banka-havalesi', 'mpay-fast-havale', 'mpay-fast', 'trust-para', 'trustpara', 'bank-transfer', 'banka']
@@ -156,8 +160,9 @@ export default function DepositPage() {
             })
             .map(method => {
               // Icon URL'sini ekle
-              const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-')
-              const icon = iconsMap[iconKey]
+              const iconKey = (method.id || method.name || '').toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-')
+              const isGalaxyPay = iconKey.includes('galaxy') || (method.id || '').toLowerCase().includes('galaxy') || (method.name || '').toLowerCase().includes('galaxy')
+              const icon = isGalaxyPay ? '/images/galaxypay-logo.png' : (iconsMap[iconKey] || iconsMap[(method.id || '').toLowerCase()] || (method as any).image || undefined)
               
               // Sadece bu yöntemi favori olarak işaretle
               const favoriteIds = ['usdt-trc20', 'btc', 'eth', 'trx', 'usdt-erc20', 'galaxypay', 'meeldev', 'super-havale', 'mpay-havale', 'hizli-odeme-havale', 'maxi-havale']
@@ -190,7 +195,8 @@ export default function DepositPage() {
                 min: minOverride,
                 max: maxOverride,
                 icon: icon || undefined,
-                favorite: isFavorite
+                favorite: isFavorite,
+                isGalaxyPay
               }
             })
             .sort((a, b) => {
@@ -320,7 +326,7 @@ export default function DepositPage() {
     setShowConfirmModal(false)
     const amount = needsAmountInput ? parseFloat(depositAmount) : 0
     if (needsAmountInput && (!amount || amount <= 0)) {
-      alert('Lütfen geçerli bir tutar girin.')
+      alert('Lütfen ge��erli bir tutar girin.')
       return
     }
     if (selected.id === 'galaxypay' && needsAmountInput && amount < 100) {
@@ -704,7 +710,12 @@ export default function DepositPage() {
                       style={{ background: "linear-gradient(140deg, rgb(85 85 85) 5%, rgb(37 37 37) 40%, rgb(0, 0, 0) 60%)", boxShadow: "rgba(255, 255, 255, 0.2) 0px 0px 0px 1px inset" }}
                     >
                       <div className="w-full flex items-center justify-start mb-2" style={{ height: "28px" }}>
-                        {method.icon ? (
+                        {(method as any).isGalaxyPay ? (
+                          <div className="flex flex-col leading-none gap-0.5">
+                            <span className="text-white font-bold" style={{ fontSize: "15px" }}>GalaxyPay</span>
+                            <span className="text-gray-400 font-semibold" style={{ fontSize: "11px" }}>HAVALE</span>
+                          </div>
+                        ) : method.icon ? (
                           <img src={method.icon} alt={method.name} className="h-full w-auto object-contain" />
                         ) : (
                           <span className="text-[#00d4b4] font-extrabold leading-none text-[10px]">{method.logo}</span>
