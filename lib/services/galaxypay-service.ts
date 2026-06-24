@@ -54,6 +54,7 @@ export interface GalaxyPayDepositResponse {
   data?: any
   error?: string
   message?: string
+  ip_address?: string
 }
 
 export interface GalaxyPayWithdrawResponse {
@@ -140,7 +141,7 @@ export const galaxypayService = {
 
       if (d.paymentUrl) return { success: true, paymentUrl: d.paymentUrl, externalTransactionId: d.externalTransactionId, bankInfo: hasBankInfo ? bankInfo : undefined, data: raw }
       if (d.success)    return { success: true, externalTransactionId: d.externalTransactionId, message: raw?.message, bankInfo: hasBankInfo ? bankInfo : undefined, data: raw }
-      return { success: false, error: d.error || raw?.message || 'GalaxyPay yatirim baslatılamadi', data: raw }
+      return { success: false, error: d.error || raw?.message || 'GalaxyPay yatirim baslatılamadi', data: raw, ip_address: d.ip_address || undefined }
     } catch (e: any) {
       return { success: false, error: e?.message || 'GalaxyPay baglanti hatasi' }
     }

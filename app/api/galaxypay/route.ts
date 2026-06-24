@@ -11,14 +11,12 @@ export async function POST(req: NextRequest) {
 
     const { type, method, amount, iban, accountHolder, bankId, accountNumber, branchCode, tcno } = body
 
-    console.log("[v0] GalaxyPay route body:", JSON.stringify({ type, method, amount, hasToken: !!token }))
-
     if (!token) {
       return NextResponse.json({ success: false, error: 'Giris yapmaniz gerekiyor.' }, { status: 401 })
     }
+
     const parsedAmount = Number(amount)
     if (!type || !method || isNaN(parsedAmount) || parsedAmount <= 0) {
-      console.log("[v0] GalaxyPay 400 reason:", { type, method, amount, parsedAmount })
       return NextResponse.json({ success: false, error: `Eksik parametre: type=${type}, method=${method}, amount=${amount}` }, { status: 400 })
     }
 
@@ -32,20 +30,17 @@ export async function POST(req: NextRequest) {
     let requestBody: Record<string, unknown>
 
     if (type === 'deposit') {
-      // POST /payment/galaxypay/deposit — backend body'deki method ile getGalaxyPayEndpoint() çağırır
-      // method zorunlu: "lobby" | "bank-transfer" | "papara"
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
       requestBody = { amount: parsedAmount, method }
     } else {
-      // POST /payment/galaxypay/withdraw — { amount, method, ...banka alanlari }
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
       requestBody = { amount: parsedAmount, method }
-      if (iban)          requestBody.iban           = iban
-      if (accountHolder) requestBody.accountHolder  = accountHolder
-      if (bankId)        requestBody.bankId         = bankId
-      if (accountNumber) requestBody.accountNumber  = accountNumber
-      if (branchCode)    requestBody.branchCode     = branchCode
-      if (tcno)          requestBody.tcno           = tcno
+      if (iban)          requestBody.iban          = iban
+      if (accountHolder) requestBody.accountHolder = accountHolder
+      if (bankId)        requestBody.bankId        = bankId
+      if (accountNumber) requestBody.accountNumber = accountNumber
+      if (branchCode)    requestBody.branchCode    = branchCode
+      if (tcno)          requestBody.tcno          = tcno
     }
 
     const response = await fetch(endpoint, {
@@ -58,7 +53,7 @@ export async function POST(req: NextRequest) {
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
 
-    console.log("[v0] GalaxyPay backend status:", response.status, "data:", JSON.stringify(data))
+    console.log("[v0] GalaxyPay RAW:", text)
 
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
@@ -73,7 +68,6 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentUrl = normalizeUrl(rawUrl)
-
     const success = data?.success ?? response.ok
     const error = data?.error?.message || data?.error || data?.message || null
 
@@ -85,6 +79,7 @@ export async function POST(req: NextRequest) {
       data: data?.data || null,
       error: success ? null : error,
       message: data?.message || null,
+      ip_address: data?.ip_address || null,
     }, { status: response.ok ? 200 : response.status })
 
   } catch (err: unknown) {
