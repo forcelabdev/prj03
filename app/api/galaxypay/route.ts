@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       if (accountNumber) requestBody.accountNumber = accountNumber
       if (branchCode)    requestBody.branchCode    = branchCode
       if (tcno)          requestBody.tcno          = tcno
+      if (customerName)  requestBody.customerName  = customerName
     }
 
     const response = await fetch(endpoint, {
@@ -52,8 +53,6 @@ export async function POST(req: NextRequest) {
     const text = await response.text()
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
-
-    console.log("[v0] GalaxyPay RAW:", text)
 
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =

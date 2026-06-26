@@ -182,7 +182,6 @@ export const galaxypayService = {
         }),
       })
       const d = await res.json()
-      console.log("[v0] GalaxyPay withdraw response:", JSON.stringify(d))
       if (d.success) return {
         success: true,
         externalTransactionId: d.data?.externalTransactionId || d.externalTransactionId || undefined,
