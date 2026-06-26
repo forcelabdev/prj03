@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentUrl = normalizeUrl(rawUrl)
-    const success = data?.success ?? response.ok
-    const error = data?.error?.message || data?.error || data?.message || null
+    const success = !!(data?.success ?? response.ok)
+    const error = data?.error?.message || data?.error || (!success ? data?.message : null) || null
 
     return NextResponse.json({
       success,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       externalTransactionId: data?.data?.externalTransactionId || null,
       data: data?.data || null,
       error: success ? null : error,
-      message: data?.message || null,
+      message: success ? (data?.message || data?.data?.message || null) : null,
       ip_address: data?.ip_address || null,
     }, { status: response.ok ? 200 : response.status })
 
