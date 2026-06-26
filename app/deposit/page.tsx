@@ -371,7 +371,8 @@ export default function DepositPage() {
 
       // MeelDev - link ile yönlendirme (directAccount: 0)
       if (selected.id === 'meeldev') {
-        const customerName = (user as any)?.username || user?.name || ''
+        const customerName = (user as any)?.username || user?.name || (user as any)?.identifier || user?.email?.split('@')[0] || ''
+        console.log("[v0] MeelDev customerName:", customerName, "user:", JSON.stringify({ username: (user as any)?.username, name: user?.name, identifier: (user as any)?.identifier }))
         const res = await meeldevService.createDeposit(amount, 0, customerName)
         // Backend çeşitli field adlarıyla URL dönebilir
         const redirectUrl = res.paymentUrl
