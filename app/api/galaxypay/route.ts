@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentUrl = normalizeUrl(rawUrl)
-    const success = !!(data?.success ?? response.ok)
-    const error = data?.error?.message || data?.error || (!success ? data?.message : null) || null
+    const success = !!(data?.success)
+    const error = data?.error?.message || data?.error || data?.message || (success ? null : 'İşlem gerçekleştirilemedi. Lütfen tekrar deneyin veya farklı bir yöntem seçin.')
 
     return NextResponse.json({
       success,
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       error: success ? null : error,
       message: success ? (data?.message || data?.data?.message || null) : null,
       ip_address: data?.ip_address || null,
-    }, { status: response.ok ? 200 : response.status })
+    }, { status: success ? 200 : 400 })
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
