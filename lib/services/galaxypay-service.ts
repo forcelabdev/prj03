@@ -182,12 +182,8 @@ export const galaxypayService = {
         }),
       })
       const d = await res.json()
-      if (d.success) return {
-        success: true,
-        externalTransactionId: d.data?.externalTransactionId || d.externalTransactionId || undefined,
-        message: d.message || d.data?.message || 'Çekim talebi oluşturuldu. Admin onayı bekleniyor.',
-      }
-      return { success: false, error: d.error || d.message || d.data?.message || 'GalaxyPay cekim baslatılamadi' }
+      if (d.success) return { success: true, externalTransactionId: d.externalTransactionId, message: d.data?.message }
+      return { success: false, error: d.error || d.data?.message || 'GalaxyPay cekim baslatılamadi' }
     } catch (e: any) {
       return { success: false, error: e?.message || 'GalaxyPay baglanti hatasi' }
     }
