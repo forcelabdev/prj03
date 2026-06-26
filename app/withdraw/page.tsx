@@ -52,7 +52,33 @@ export default function WithdrawPage() {
   const [branchCode, setBranchCode] = useState("")       // GalaxyPay branchCode
   const [tcno, setTcno] = useState("")                   // GalaxyPay TC kimlik no
   const [address, setAddress] = useState("")           // Kripto cuzdan
-  const [galaxypayBanks, setGalaxypayBanks] = useState<{ id: number; name: string }[]>([])
+  const TURKISH_BANKS: { id: number; name: string }[] = [
+    { id: 1,  name: "Ziraat Bankası" },
+    { id: 2,  name: "Halkbank" },
+    { id: 3,  name: "Vakıfbank" },
+    { id: 4,  name: "İş Bankası" },
+    { id: 5,  name: "Garanti BBVA" },
+    { id: 6,  name: "Yapı Kredi" },
+    { id: 7,  name: "Akbank" },
+    { id: 8,  name: "Denizbank" },
+    { id: 9,  name: "TEB" },
+    { id: 10, name: "Finansbank (QNB)" },
+    { id: 11, name: "Şekerbank" },
+    { id: 12, name: "ING Bank" },
+    { id: 13, name: "HSBC" },
+    { id: 14, name: "Fibabanka" },
+    { id: 15, name: "Alternatifbank" },
+    { id: 16, name: "Burgan Bank" },
+    { id: 17, name: "Türkiye Finans" },
+    { id: 18, name: "Kuveyt Türk" },
+    { id: 19, name: "Albaraka Türk" },
+    { id: 20, name: "Ziraat Katılım" },
+    { id: 21, name: "Vakıf Katılım" },
+    { id: 22, name: "Odeabank" },
+    { id: 23, name: "Anadolubank" },
+    { id: 24, name: "Türk Ekonomi Bankası" },
+  ]
+  const [galaxypayBanks, setGalaxypayBanks] = useState<{ id: number; name: string }[]>(TURKISH_BANKS)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -69,12 +95,13 @@ export default function WithdrawPage() {
     return () => window.removeEventListener("resize", check)
   }, [])
 
-  // GalaxyPay banka listesini cek
+  // GalaxyPay banka listesini cek — gelirse backend'i kullan, gelmezse sabit Türk bankaları
   useEffect(() => {
     galaxypayService.getMethods().then((res) => {
       if (res.success && res.data?.banks?.length) {
         setGalaxypayBanks(res.data.banks)
       }
+      // gelmezse TURKISH_BANKS zaten default state
     }).catch(() => {})
   }, [])
 
