@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.replace('Bearer ', '').trim()
 
-    const { type, method, amount, iban, accountHolder, bankId, accountNumber, branchCode, tcno } = body
+    const { type, method, amount, customerName, iban, accountHolder, bankId, accountNumber, branchCode, tcno } = body
 
     if (!token) {
       return NextResponse.json({ success: false, error: 'Giris yapmaniz gerekiyor.' }, { status: 401 })
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (type === 'deposit') {
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = { amount: parsedAmount, method }
+      requestBody = { amount: parsedAmount, method, ...(customerName ? { customerName } : {}) }
     } else {
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
       requestBody = { amount: parsedAmount, method }

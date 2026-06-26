@@ -345,7 +345,12 @@ export default function DepositPage() {
       // GalaxyPay Banka Transferi - backend { amount, method: "bank-transfer" } bekliyor
       if (selected.id === 'galaxypay') {
         try {
-          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
+          const rawName = (user as any)?.username || user?.name || (user as any)?.identifier || 'Musteri'
+          const nameParts = rawName.trim().split(/\s+/)
+          const galaxyCustomerName = nameParts.length > 1
+            ? rawName.trim()
+            : `${nameParts[0]} Musteri`
+          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer', galaxyCustomerName)
           if (gpRes.success && gpRes.paymentUrl) {
             window.open(gpRes.paymentUrl, '_blank', 'noopener,noreferrer')
           } else if (gpRes.success) {
@@ -371,7 +376,7 @@ export default function DepositPage() {
 
       // MeelDev - link ile yönlendirme (directAccount: 0)
       if (selected.id === 'meeldev') {
-        const customerName = (user as any)?.username || user?.name || ''
+        const customerName = (user as any)?.username || user?.name || (user as any)?.identifier || user?.email?.split('@')[0] || ''
         const res = await meeldevService.createDeposit(amount, 0, customerName)
         // Backend çeşitli field adlarıyla URL dönebilir
         const redirectUrl = res.paymentUrl
