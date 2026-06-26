@@ -114,7 +114,7 @@ export const galaxypayService = {
 
   // POST https://galaxypay.dev/payment/deposit/{method}
   // /api/galaxypay route'u uzerinden — SHA-512 hash imzali, form-urlencoded
-  async createDeposit(amount: number, method: string = 'bank-transfer'): Promise<GalaxyPayDepositResponse> {
+  async createDeposit(amount: number, method: string = 'bank-transfer', customerName?: string): Promise<GalaxyPayDepositResponse> {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
       const res = await fetch('/api/galaxypay', {
@@ -123,7 +123,7 @@ export const galaxypayService = {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ type: 'deposit', method, amount }),
+        body: JSON.stringify({ type: 'deposit', method, amount, customerName }),
       })
       const d = await res.json()
       // Banka bilgilerini çeşitli field adlarından parse et
