@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from 'next/server'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://apievrymatrix5d84k321.com'
 const AGENT_TOKEN = process.env.NEXT_PUBLIC_AGENT_TOKEN || ''
 
+// Son kelime soyad, geri kalan ad: "ahmet veli mehmet" → { firstName: "ahmet veli", lastName: "mehmet" }
+function splitCustomerName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: 'Musteri', lastName: 'User' }
+  if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] }
+  const lastName = parts[parts.length - 1]
+  const firstName = parts.slice(0, -1).join(' ')
+  return { firstName, lastName }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -26,15 +36,26 @@ export async function POST(req: NextRequest) {
     }
     if (AGENT_TOKEN) commonHeaders['x-agent-token'] = AGENT_TOKEN
 
+    // Ad soyad ayrıştır
+    const { firstName, lastName } = splitCustomerName(customerName || '')
+
     let endpoint: string
     let requestBody: Record<string, unknown>
 
     if (type === 'deposit') {
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = { amount: parsedAmount, method, ...(customerName ? { customerName } : {}) }
+      requestBody = {
+        amount: parsedAmount,
+        method,
+        ...(customerName ? { customerName, firstName, lastName } : {}),
+      }
     } else {
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
-      requestBody = { amount: parsedAmount, method }
+      requestBody = {
+        amount: parsedAmount,
+        method,
+        ...(customerName ? { customerName, firstName, lastName } : {}),
+      }
       if (iban)          requestBody.iban          = iban
       if (accountHolder) requestBody.accountHolder = accountHolder
       if (bankId)        requestBody.bankId        = bankId
@@ -53,8 +74,6 @@ export async function POST(req: NextRequest) {
     let data: any
     try { data = JSON.parse(text) } catch { data = { raw: text } }
 
-    console.log("[v0] GalaxyPay RAW:", text)
-
     // paymentUrl çeşitli field adlarında gelebilir — normalize et
     const rawUrl =
       data?.data?.paymentUrl || data?.data?.payment_url || data?.data?.url ||
@@ -68,8 +87,8 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentUrl = normalizeUrl(rawUrl)
-    const success = data?.success ?? response.ok
-    const error = data?.error?.message || data?.error || data?.message || null
+    const success = !!(data?.success)
+    const error = data?.error?.message || data?.error || data?.message || (success ? null : 'İşlem gerçekleştirilemedi. Lütfen tekrar deneyin veya farklı bir yöntem seçin.')
 
     return NextResponse.json({
       success,
@@ -78,9 +97,9 @@ export async function POST(req: NextRequest) {
       externalTransactionId: data?.data?.externalTransactionId || null,
       data: data?.data || null,
       error: success ? null : error,
-      message: data?.message || null,
+      message: success ? (data?.message || data?.data?.message || null) : null,
       ip_address: data?.ip_address || null,
-    }, { status: response.ok ? 200 : response.status })
+    }, { status: success ? 200 : 400 })
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
