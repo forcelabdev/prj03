@@ -10,6 +10,7 @@ interface User {
   identifier?: string // Backend API icin kullanici kimlik bilgisi
   numericId?: string | number // Drakon API icin numeric kullanici id
   email: string
+  name?: string
   username?: string
   phone?: string
   mfaEnabled?: boolean
@@ -89,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       identifier: u.identifier || u._id || u.id || "",
       numericId: u.numericId ?? u.numeric_id ?? undefined,
       email: u.local?.email || u.email || identifierEmail || "",
+      name: u.name || u.fullName || u.full_name || undefined,
       username: u.username || "",
       avatar: u.avatar,
       rank: u.rank,
@@ -392,6 +394,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           identifier: u.identifier || u._id || u.id || "",
           numericId: u.numericId ?? u.numeric_id ?? undefined,
           email: u.local?.email || u.email || "",
+          name: u.name || u.fullName || u.full_name || undefined,
           username: u.username,
           phone: (() => {
             const raw = u.phone || u.local?.phone || u.gsm || u.mobile || u.local?.gsm || u.local?.mobile
