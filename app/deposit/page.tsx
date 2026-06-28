@@ -345,12 +345,7 @@ export default function DepositPage() {
       // GalaxyPay Banka Transferi - backend { amount, method: "bank-transfer" } bekliyor
       if (selected.id === 'galaxypay') {
         try {
-          const rawName = (user as any)?.username || user?.name || (user as any)?.identifier || 'Musteri'
-          const nameParts = rawName.trim().split(/\s+/)
-          const galaxyCustomerName = nameParts.length > 1
-            ? rawName.trim()
-            : `${nameParts[0]} Musteri`
-          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer', galaxyCustomerName)
+          const gpRes = await galaxypayService.createDeposit(amount, 'bank-transfer')
           if (gpRes.success && gpRes.paymentUrl) {
             window.open(gpRes.paymentUrl, '_blank', 'noopener,noreferrer')
           } else if (gpRes.success) {
