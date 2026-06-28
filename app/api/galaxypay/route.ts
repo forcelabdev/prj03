@@ -6,7 +6,7 @@ const AGENT_TOKEN = process.env.NEXT_PUBLIC_AGENT_TOKEN || ''
 // Son kelime soyad, geri kalan ad: "ahmet veli mehmet" → { firstName: "ahmet veli", lastName: "mehmet" }
 function splitCustomerName(fullName: string): { firstName: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return { firstName: 'Musteri', lastName: 'User' }
+  if (parts.length === 0) return { firstName: 'Musteri', lastName: 'Musteri' }
   if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] }
   const lastName = parts[parts.length - 1]
   const firstName = parts.slice(0, -1).join(' ')
@@ -36,20 +36,15 @@ export async function POST(req: NextRequest) {
     }
     if (AGENT_TOKEN) commonHeaders['x-agent-token'] = AGENT_TOKEN
 
-    // Ad soyad ayrıştır
-    const { firstName, lastName } = splitCustomerName(customerName || '')
-
     let endpoint: string
     let requestBody: Record<string, unknown>
 
-    const nameFields = customerName ? { customerName } : {}
-
     if (type === 'deposit') {
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = { amount: parsedAmount, method, ...nameFields }
+      requestBody = { amount: parsedAmount, method }
     } else {
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
-      requestBody = { amount: parsedAmount, method, ...nameFields }
+      requestBody = { amount: parsedAmount, method }
       if (iban)          requestBody.iban          = iban
       if (accountHolder) requestBody.accountHolder = accountHolder
       if (bankId)        requestBody.bankId        = bankId
