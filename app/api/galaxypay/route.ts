@@ -42,20 +42,14 @@ export async function POST(req: NextRequest) {
     let endpoint: string
     let requestBody: Record<string, unknown>
 
+    const nameFields = customerName ? { customerName, firstName, lastName, first_name: firstName, last_name: lastName, name: `${firstName} ${lastName}` } : {}
+
     if (type === 'deposit') {
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
-      requestBody = {
-        amount: parsedAmount,
-        method,
-        ...(customerName ? { customerName, firstName, lastName } : {}),
-      }
+      requestBody = { amount: parsedAmount, method, ...nameFields }
     } else {
       endpoint = `${API_BASE}/payment/galaxypay/withdraw`
-      requestBody = {
-        amount: parsedAmount,
-        method,
-        ...(customerName ? { customerName, firstName, lastName } : {}),
-      }
+      requestBody = { amount: parsedAmount, method, ...nameFields }
       if (iban)          requestBody.iban          = iban
       if (accountHolder) requestBody.accountHolder = accountHolder
       if (bankId)        requestBody.bankId        = bankId
