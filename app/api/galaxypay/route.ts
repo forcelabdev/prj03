@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     let endpoint: string
     let requestBody: Record<string, unknown>
 
-    const nameFields = customerName ? { customerName, firstName, lastName, first_name: firstName, last_name: lastName, name: `${firstName} ${lastName}` } : {}
+    const nameFields = customerName ? { customerName } : {}
 
     if (type === 'deposit') {
       endpoint = `${API_BASE}/payment/galaxypay/deposit`
