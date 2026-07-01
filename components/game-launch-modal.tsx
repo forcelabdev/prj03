@@ -584,10 +584,7 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
       const numericId = user?.identifier || user?.id || ""
 
       const rawGameCode = (game as any).game_code || (game as any).gameCode || game.id || ""
-      console.log("[v0] handlePlay - game:", game.name, "rawGameCode:", rawGameCode, "provider:", game.provider)
-
       const detail = await gamesService.getGameDetails(rawGameCode)
-      console.log("[v0] getGameDetails result:", JSON.stringify(detail))
 
       let distribution = (game as any).distribution || ""
       let vendorCode = (game as any).provider_code || (game as any).providerCode || game.provider || ""
@@ -600,18 +597,14 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         gameCode = g.game_code || gameCode
       }
 
-      console.log("[v0] launchGame params - userId:", userId, "vendorCode:", vendorCode, "gameCode:", gameCode, "distribution:", distribution, "demo:", demo)
-
       if (!gameCode) { setLaunchError("Oyun kodu bulunamadi"); setIsLaunching(false); return }
 
       const result = await launchGame(userId, vendorCode, gameCode, "tr", distribution, numericId, demo)
-      console.log("[v0] launchGame result:", JSON.stringify(result))
 
       if (result.success && result.launchUrl) {
         setGameUrl(result.launchUrl)
       } else {
         const code = (result as any).errorCode || ""
-        console.log("[v0] launchGame failed - code:", code, "error:", result.error)
         if (code === "RATE_LIMITED") {
           setLaunchError("Lütfen birkaç saniye bekleyip tekrar deneyin.")
         } else if (code === "INVALID_REQUEST" || result.error?.includes("user_id is required")) {
@@ -625,7 +618,6 @@ export function GameLaunchModal({ isOpen, onClose, game, onPlay }: GameLaunchMod
         }
       }
     } catch (e: any) {
-      console.log("[v0] handlePlay exception:", e?.message, "response:", JSON.stringify(e?.response?.data))
       const msg = e?.response?.data?.msg || ""
       if (msg === "INVALID_REQUEST" || e?.message?.includes("user_id is required")) {
         setLaunchError("Oyun oynayabilmek için lütfen giriş yapın!")
