@@ -242,6 +242,22 @@ export const gamesService = {
 
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
 
+    const requestBody = {
+      distribution,
+      userId,
+      vendorCode,
+      gameCode,
+      language,
+      numericId,
+      channel: isMobile ? 'mobile' : 'desktop',
+      domain,
+      mirror,
+      isDemo,
+    }
+
+    console.log('[v0] LAUNCH REQUEST BODY:', requestBody)
+    console.log('[v0] LAUNCH authToken exists:', !!authToken)
+
     // Tum game launch istekleri /api/game-launch uzerinden gider
     const res = await fetch('/api/game-launch', {
       method: 'POST',
@@ -249,21 +265,15 @@ export const gamesService = {
         'Content-Type': 'application/json',
         ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
       },
-      body: JSON.stringify({
-        distribution,
-        userId,
-        vendorCode,
-        gameCode,
-        language,
-        numericId,
-        channel: isMobile ? 'mobile' : 'desktop',
-        domain,
-        mirror,
-        isDemo,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
+    console.log('[v0] LAUNCH HTTP status:', res.status)
+
     const d = await res.json()
+
+    console.log('[v0] LAUNCH RAW RESPONSE:', d)
+
     // Tum olasi URL field adlarini kontrol et
     const url = d?.launch_url 
       || d?.game_url 

@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
 
     const dist = (distribution || '').toLowerCase()
 
+    console.log('[v0] GAME-LAUNCH INPUT:', { distribution, dist, userId, vendorCode, gameCode, language, numericId, channel, domain, mirror, isDemo })
+
     let endpoint = ''
     let payload: Record<string, unknown> = {}
 
@@ -91,6 +93,9 @@ export async function POST(req: NextRequest) {
     }
 
     const headers = getHeaders(authHeader)
+
+    console.log('[v0] GAME-LAUNCH → endpoint:', endpoint)
+    console.log('[v0] GAME-LAUNCH → payload:', JSON.stringify(payload))
     
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
@@ -98,14 +103,20 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     })
 
+    console.log('[v0] GAME-LAUNCH ← backend status:', response.status)
+
     const responseText = await response.text()
     
     let data
     try {
       data = JSON.parse(responseText)
     } catch {
+      console.log('[v0] GAME-LAUNCH ← JSON parse failed, raw:', responseText.substring(0, 300))
       return NextResponse.json({ msg: 'Invalid JSON response', details: responseText.substring(0, 200) }, { status: 500 })
     }
+
+    console.log('[v0] GAME-LAUNCH ← parsed response keys:', Object.keys(data || {}))
+    console.log('[v0] GAME-LAUNCH ← full response:', JSON.stringify(data))
     
     return NextResponse.json(data, { status: response.ok ? 200 : response.status })
   } catch (err: unknown) {
