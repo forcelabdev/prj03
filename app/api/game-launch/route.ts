@@ -79,12 +79,14 @@ export async function POST(req: NextRequest) {
       endpoint = '/betinovi_api/'
       payload = { 
         method: 'game_launch', 
-        user_id: userId, 
-        vendorCode, 
-        gameCode, 
-        language, 
+        user_code: userId,           // Betinovi: user_code
+        provider_code: vendorCode,   // Betinovi: provider_code
+        game_code: gameCode,         // Betinovi: game_code
+        lang: language,              // Betinovi: lang
         channel,
         isDemo,
+        // numericId fallback - bazi Betinovi sub-provider'lar icin
+        ...(numericId ? { numericId } : {}),
         // customData SADECE sportsbook (sport-bbbet) için - JSON string olarak
         ...(vendorCode === 'sport-bbbet' && domain && mirror && { 
           customData: JSON.stringify({ domain, mirror })
