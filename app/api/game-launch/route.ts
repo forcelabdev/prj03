@@ -39,7 +39,21 @@ export async function POST(req: NextRequest) {
       userLastRequestMap.set(userId, now)
     }
 
-    const dist = (distribution || '').toLowerCase()
+    let dist = (distribution || '').toLowerCase()
+
+    // distribution bos gelirse vendorCode ve gameCode'dan tahmin et
+    if (!dist && vendorCode) {
+      if (/^\d+$/.test(gameCode)) {
+        // gameCode tamamen rakamsa drakon (ornek: "907", "48")
+        dist = 'drakon'
+      } else if (vendorCode === vendorCode.toUpperCase() && !vendorCode.includes('-')) {
+        // vendorCode tamamen uppercase ve tire yoksa nexus (ornek: "PRAGMATIC", "AMATIC")
+        dist = 'nexus'
+      } else if (vendorCode.startsWith('slot-') || vendorCode.startsWith('live-') || vendorCode.includes('-')) {
+        // vendorCode slug formatindaysa betinovi (ornek: "slot-pragmatic", "slot-hacksaw")
+        dist = 'betinovi'
+      }
+    }
 
     console.log('[v0] GAME-LAUNCH INPUT:', { distribution, dist, userId, vendorCode, gameCode, language, numericId, channel, domain, mirror, isDemo })
 
